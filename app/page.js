@@ -177,6 +177,10 @@ export default function Home() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Scan failed");
       setData(json);
+      // TEMP preview: add ?preview=1 to the URL to view the unlocked premium report without paying.
+      if (new URLSearchParams(window.location.search).get("preview") === "1") {
+        setPremium(makePreviewReport(json));
+      }
     } catch (e) { setError(e.message); } finally { setLoading(false); }
   }
 
@@ -202,7 +206,7 @@ export default function Home() {
 
       <div className="nav">
         <div className="logo">DIGI<span className="sq">STICK</span></div>
-        <a className="nav-cta" href="https://digistick.in" target="_blank" rel="noopener noreferrer">Work with us</a>
+        <a className="nav-cta" href="https://digistick.in" target="_blank" rel="noopener noreferrer">Need help implementing?</a>
       </div>
 
       <section className="hero">
@@ -259,7 +263,18 @@ export default function Home() {
                           Conversion (CRO) audit
                           {croFails > 0 && <span className="lbl-badge">{croFails} not optimized</span>}
                         </div>
-                        <div className="checks anim">{croChecks.map(renderCheck)}</div>
+                        <div className="checks anim">{croChecks.slice(0, 4).map(renderCheck)}</div>
+                        {croChecks.length > 4 && (
+                          <div className="cro-locked">
+                            <div className="checks cro-blur" aria-hidden="true">{croChecks.slice(4).map(renderCheck)}</div>
+                            <div className="cro-lock-overlay">
+                              <div className="lock-ic">🔒</div>
+                              <div className="cro-lock-title">+{croChecks.length - 4} more conversion checks</div>
+                              <div className="cro-lock-sub">See every CRO gap on your store — unlock the full fix-kit below.</div>
+                              <button className="btn-yellow" style={{ width: "auto", padding: "12px 26px" }} onClick={() => document.querySelector(".sales")?.scrollIntoView({ behavior: "smooth" })}>See what's locked ↓</button>
+                            </div>
+                          </div>
+                        )}
                       </>
                     )}
                   </>
@@ -269,6 +284,7 @@ export default function Home() {
 
               {premium && (
                 <div id="premium-report">
+                  {premium.preview && <div className="preview-flag">👁 Preview mode — this is sample content so you can see the unlocked report. Real buyers get a version tailored to their scan.</div>}
                   <div className="section-label">★ Your conversion roadmap</div>
                   <p className="road-summary">{premium.roadmap.summary}</p>
                   <div className="roadmap">
@@ -420,6 +436,30 @@ export default function Home() {
       </footer>
     </>
   );
+}
+
+function makePreviewReport(data) {
+  return {
+    preview: true,
+    url: data?.url,
+    roadmap: {
+      summary: "Your store is leaking conversions on trust, urgency, and clarity. Here's the prioritized order to fix it.",
+      steps: [
+        { title: "Add urgency / scarcity near Add-to-Cart", impact: "High", detail: "No urgency cues were found — add a low-stock or limited-time signal to push undecided buyers to act now." },
+        { title: "Show COD + trust badges at the buying decision", impact: "High", detail: "Indian shoppers abandon without COD/returns assurance. Add a trust row right under the buy button." },
+        { title: "Surface a free-shipping incentive", impact: "High", detail: "No free-shipping message detected — add a progress bar to lift average order value." },
+        { title: "Rewrite meta description (currently too long)", impact: "Medium", detail: "Trim to ~155 chars with a benefit + CTA to improve click-through from Google." },
+        { title: "Fix the 2 H1 tags down to one", impact: "Medium", detail: "Multiple H1s dilute SEO signals — keep a single, keyword-rich H1." },
+        { title: "Add alt text to the 11 missing images", impact: "Medium", detail: "Recovers organic image traffic and improves accessibility scoring." },
+      ],
+    },
+    snippets: [
+      { id: "urgency", title: "Low-stock urgency bar (product page)", why: "Scarcity is one of the highest-ROI CRO levers — it nudges hesitant buyers to act.", where: "Paste into sections/main-product.liquid just below the price.",
+        code: `{%- assign qty = product.selected_or_first_available_variant.inventory_quantity -%}\n{%- if qty > 0 and qty <= 15 -%}\n  <div class="ds-urgency">Hurry — only <strong>{{ qty }}</strong> left!</div>\n{%- endif -%}` },
+      { id: "cod", title: "COD + trust badges row", why: "Reduces checkout anxiety for Indian D2C shoppers — a top abandonment reason.", where: "Paste below the Add-to-Cart button.",
+        code: `<div class="ds-trust">\n  <span>💵 Cash on Delivery</span>\n  <span>🔁 7-day returns</span>\n  <span>🔒 Secure checkout</span>\n</div>` },
+    ],
+  };
 }
 
 function loadCashfree() {
