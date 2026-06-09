@@ -93,11 +93,14 @@ async function runOnPageSeo(url) {
   const ogTitle = $('meta[property="og:title"]').attr("content") || "";
   const ogImage = $('meta[property="og:image"]').attr("content") || "";
   const hasSchema = $('script[type="application/ld+json"]').length > 0;
-  const wordCount = $("body").text().replace(/\s+/g, " ").trim().split(" ").length;
+  const bodyText = $("body").text().replace(/\s+/g, " ").trim();
+  const wordCount = bodyText.split(" ").length;
+  const lowerHtml = html.toLowerCase();
 
   const checks = [];
-  const pass = (label, ok, detail) => checks.push({ label, ok, detail });
+  const pass = (label, ok, detail, cat = "seo") => checks.push({ label, ok, detail, cat });
 
+  // ---- SEO & technical ----
   pass("Title tag", !!title && title.length >= 10 && title.length <= 65,
     title ? `“${title}” (${title.length} chars)` : "Missing title tag");
   pass("Meta description", !!metaDesc && metaDesc.length >= 50 && metaDesc.length <= 160,
@@ -112,7 +115,53 @@ async function runOnPageSeo(url) {
   pass("Structured data (schema)", hasSchema, hasSchema ? "JSON-LD found" : "No schema markup");
   pass("Content depth", wordCount >= 300, `${wordCount} words on page`);
 
-  return { checks, meta: { title, metaDesc, h1Count: h1s.length, wordCount } };
+  // ---- CRO & conversion signals (detected from the live HTML) ----
+  const has = (...kw) => kw.some((k) => lowerHtml.includes(k));
+
+  const hasUrgency = has("only", "hurry", "selling fast", "left in stock", "limited stock", "almost gone", "low stock");
+  pass("Urgency / scarcity", hasUrgency,
+    hasUrgency ? "Urgency signals detected" : "No urgency or scarcity cues — buyers feel no reason to act now", "cro");
+
+  const hasTrust = has("cash on delivery", "cod", "secure checkout", "money back", "easy returns", "100% secure", "free returns");
+  pass("Trust / COD signals", hasTrust,
+    hasTrust ? "Trust signals present" : "No COD / returns / security badges found near buying decision", "cro");
+
+  const hasReviews = has("reviews", "rating", "stars", "testimonial", "★", "verified buyer");
+  pass("Reviews / social proof", hasReviews,
+    hasReviews ? "Social proof detected" : "No reviews or ratings found — a top driver of purchase confidence", "cro");
+
+  const ctaMatches = (lowerHtml.match(/add to cart|buy now|shop now|order now|add to bag/g) || []).length;
+  pass("Clear call-to-action", ctaMatches > 0,
+    ctaMatches > 0 ? `${ctaMatches} CTA(s) detected` : "No obvious buy/CTA button text found", "cro");
+
+  const hasOffer = has("free shipping", "discount", "% off", "offer", "coupon", "save ");
+  pass("Offer / incentive", hasOffer,
+    hasOffer ? "Offer/incentive present" : "No visible offer or incentive to push the sale", "cro");
+
+  const hasFreeShip = has("free shipping", "free delivery");
+  pass("Free-shipping signal", hasFreeShip,
+    hasFreeShip ? "Free shipping mentioned" : "No free-shipping message — a proven AOV and conversion lever", "cro");
+
+  const hasExitCapture = has("subscribe", "newsletter", "get 10%", "join our", "sign up", "email") ;
+  pass("Email / lead capture", hasExitCapture,
+    hasExitCapture ? "Capture mechanism detected" : "No email/lead capture — abandoning visitors leave with nothing", "cro");
+
+  const hasVideo = has("<video", "youtube.com/embed", "vimeo");
+  pass("Product video / media", hasVideo,
+    hasVideo ? "Rich media present" : "No product video — static pages convert lower than rich media", "cro");
+
+  const hasFaq = has("faq", "frequently asked", "questions");
+  pass("FAQ / objection handling", hasFaq,
+    hasFaq ? "FAQ content found" : "No FAQ section — unanswered objections cost conversions", "cro");
+
+  const hasPayIcons = has("razorpay", "visa", "mastercard", "upi", "paytm", "rupay", "phonepe");
+  pass("Payment trust icons", hasPayIcons,
+    hasPayIcons ? "Payment options shown" : "No visible payment/UPI trust icons at decision point", "cro");
+
+  return {
+    checks,
+    meta: { title, metaDesc, h1Count: h1s.length, wordCount, imgsMissingAlt, imgCount: imgs.length, hasOg: !!ogTitle && !!ogImage },
+  };
 }
 
 // --- Optional AI design / UX critique --------------------------------------
