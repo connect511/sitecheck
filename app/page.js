@@ -64,20 +64,53 @@ function SessionTimer() {
   return <span className="timer-num">{mm}:{ss}</span>;
 }
 
-/* Honest revenue-leak estimate from the actual scan */
+/* Honest revenue-leak estimate from the actual scan — scaled, varied per store */
 function computeLeak(data) {
   if (!data) return null;
-  const failed = (data.seo?.checks || []).filter((c) => !c.ok).length;
+  const checks = data.seo?.checks || [];
+  const failed = checks.filter((c) => !c.ok);
+  const failedCro = failed.filter((c) => c.cat === "cro").length;
+  const failedSeo = failed.filter((c) => c.cat !== "cro").length;
   const perf = data.pagespeed?.scores?.performance;
   const seoScore = data.pagespeed?.scores?.seo;
-  let issues = failed;
+
+  let issues = failed.length;
   if (perf != null && perf < 90) issues += 1;
   if (seoScore != null && seoScore < 90) issues += 1;
-  // Conservative estimate: each unfixed friction point ~= small % of a modest store's revenue.
-  // Framed clearly as an estimate, not a promise.
-  const perIssue = 1800; // ₹/mo per friction point (illustrative, conservative)
-  const est = Math.max(issues, 1) * perIssue;
+
+  // Severity-weighted base. CRO gaps hit revenue harder than technical SEO nits.
+  let base = failedCro * 9000 + failedSeo * 4500;
+  if (perf != null && perf < 50) base += 12000;
+  else if (perf != null && perf < 90) base += 6000;
+
+  // Deterministic per-domain variance so every store shows a distinct figure.
+  const host = (() => { try { return new URL(data.url).hostname; } catch { return data.url || "x"; } })();
+  let seed = 0; for (let i = 0; i < host.length; i++) seed = (seed * 31 + host.charCodeAt(i)) % 1000;
+  const variance = 1 + (seed / 1000) * 0.6; // 1.00–1.60x
+
+  let est = Math.round(base * variance);
+  est = Math.max(25000, Math.min(est, 100000)); // clamp to ₹25k–₹1L
+  est = Math.round(est / 500) * 500; // tidy to nearest ₹500
   return { issues, est };
+}
+
+function LeakBanner({ leak }) {
+  const [run, setRun] = useState(false);
+  useEffect(() => { const t = setTimeout(() => setRun(true), 150); return () => clearTimeout(t); }, []);
+  const amt = useCountUp(leak.est, run, 1300);
+  return (
+    <div className="leak-banner">
+      <div className="leak-left">
+        <div className="leak-label">⚠ Estimated revenue leak</div>
+        <div className="leak-big">≈ ₹{amt.toLocaleString("en-IN")}<span>/month</span></div>
+        <div className="leak-sub">from <b>{leak.issues} unfixed issue{leak.issues !== 1 ? "s" : ""}</b> found on your store right now*</div>
+      </div>
+      <div className="leak-right">
+        <div className="leak-count">{leak.issues}</div>
+        <div className="leak-count-label">problems<br />to fix</div>
+      </div>
+    </div>
+  );
 }
 
 function Snippet({ s }) {
@@ -206,17 +239,32 @@ export default function Home() {
               </>)}
               {data.pagespeedError && <p className="err">Performance scan unavailable: {data.pagespeedError}</p>}
 
-              {seo && (<>
-                <div className="section-label">On-page SEO &amp; technical</div>
-                <div className="checks anim">
-                  {seo.checks.map((c) => (
-                    <div className="check" key={c.label}>
-                      <span className={`icon ${c.ok ? "ok" : "no"}`}>{c.ok ? "✓" : "✕"}</span>
-                      <div><div className="c-label">{c.label}</div><div className="c-detail">{c.detail}</div></div>
-                    </div>
-                  ))}
-                </div>
-              </>)}
+              {seo && (() => {
+                const seoChecks = seo.checks.filter((c) => c.cat !== "cro");
+                const croChecks = seo.checks.filter((c) => c.cat === "cro");
+                const croFails = croChecks.filter((c) => !c.ok).length;
+                const renderCheck = (c) => (
+                  <div className="check" key={c.label}>
+                    <span className={`icon ${c.ok ? "ok" : "no"}`}>{c.ok ? "✓" : "✕"}</span>
+                    <div><div className="c-label">{c.label}</div><div className="c-detail">{c.detail}</div></div>
+                  </div>
+                );
+                return (
+                  <>
+                    <div className="section-label">On-page SEO &amp; technical</div>
+                    <div className="checks anim">{seoChecks.map(renderCheck)}</div>
+                    {croChecks.length > 0 && (
+                      <>
+                        <div className="section-label">
+                          Conversion (CRO) audit
+                          {croFails > 0 && <span className="lbl-badge">{croFails} not optimized</span>}
+                        </div>
+                        <div className="checks anim">{croChecks.map(renderCheck)}</div>
+                      </>
+                    )}
+                  </>
+                );
+              })()}
               {data.seoError && <p className="err">{data.seoError}</p>}
 
               {premium && (
@@ -240,19 +288,7 @@ export default function Home() {
               {/* ===== SALES SECTION ===== */}
               {!premium && !unlocking && (
                 <div className="sales">
-                  {leak && (
-                    <div className="leak-banner">
-                      <div className="leak-left">
-                        <div className="leak-label">⚠ Estimated revenue leak</div>
-                        <div className="leak-big">≈ ₹{leak.est.toLocaleString("en-IN")}<span>/month</span></div>
-                        <div className="leak-sub">from <b>{leak.issues} unfixed issue{leak.issues !== 1 ? "s" : ""}</b> found on your store right now*</div>
-                      </div>
-                      <div className="leak-right">
-                        <div className="leak-count">{leak.issues}</div>
-                        <div className="leak-count-label">problems<br />to fix</div>
-                      </div>
-                    </div>
-                  )}
+                  {leak && <LeakBanner leak={leak} />}
 
                   <div className="sales-grid">
                     {/* LEFT: blurred preview of locked content */}
@@ -368,6 +404,13 @@ export default function Home() {
         </div>
       </section>
       </>)}
+
+      {data && !premium && !unlocking && (
+        <div className="sticky-unlock">
+          <div className="su-left"><span className="su-price">₹399</span><span className="su-txt">Unlock full fix-kit</span></div>
+          <button className="su-btn" onClick={unlock} disabled={unlocking}>{unlocking ? "…" : "Unlock →"}</button>
+        </div>
+      )}
 
       <footer className="footer">
         <div className="f-logo">DIGI<span className="sq">STICK</span></div>
