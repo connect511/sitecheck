@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 const SCAN_MSGS = [
   "Resolving URL…", "Running Lighthouse audit…", "Parsing on-page SEO…",
@@ -14,23 +14,70 @@ function scoreColor(v) {
   return "var(--bad)";
 }
 
-function Ring({ value, name }) {
+/* Count-up number hook */
+function useCountUp(target, run, ms = 1100) {
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    if (!run || target == null) return;
+    let raf, start;
+    const tick = (t) => {
+      if (!start) start = t;
+      const p = Math.min((t - start) / ms, 1);
+      setN(Math.round(p * target));
+      if (p < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [target, run, ms]);
+  return n;
+}
+
+function Ring({ value, name, run }) {
   const r = 38, c = 2 * Math.PI * r;
   const pct = value == null ? 0 : value / 100;
   const color = scoreColor(value);
+  const shown = useCountUp(value, run);
   return (
     <div className="gauge">
       <div className="ring">
         <svg width="92" height="92" viewBox="0 0 92 92">
           <circle cx="46" cy="46" r={r} fill="none" stroke="var(--line)" strokeWidth="7" />
           <circle cx="46" cy="46" r={r} fill="none" stroke={color} strokeWidth="7" strokeLinecap="round"
-            strokeDasharray={c} strokeDashoffset={c * (1 - pct)} style={{ transition: "stroke-dashoffset 1s ease" }} />
+            strokeDasharray={c} strokeDashoffset={run ? c * (1 - pct) : c} style={{ transition: "stroke-dashoffset 1.1s ease" }} />
         </svg>
-        <div className="val" style={{ color }}>{value == null ? "—" : value}</div>
+        <div className="val" style={{ color }}>{value == null ? "—" : shown}</div>
       </div>
       <div className="name">{name}</div>
     </div>
   );
+}
+
+/* Soft session timer — honest "saved for this session" framing */
+function SessionTimer() {
+  const [s, setS] = useState(14 * 60 + 59);
+  useEffect(() => {
+    const t = setInterval(() => setS((x) => (x > 0 ? x - 1 : 0)), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const mm = String(Math.floor(s / 60)).padStart(2, "0");
+  const ss = String(s % 60).padStart(2, "0");
+  return <span className="timer-num">{mm}:{ss}</span>;
+}
+
+/* Honest revenue-leak estimate from the actual scan */
+function computeLeak(data) {
+  if (!data) return null;
+  const failed = (data.seo?.checks || []).filter((c) => !c.ok).length;
+  const perf = data.pagespeed?.scores?.performance;
+  const seoScore = data.pagespeed?.scores?.seo;
+  let issues = failed;
+  if (perf != null && perf < 90) issues += 1;
+  if (seoScore != null && seoScore < 90) issues += 1;
+  // Conservative estimate: each unfixed friction point ~= small % of a modest store's revenue.
+  // Framed clearly as an estimate, not a promise.
+  const perIssue = 1800; // ₹/mo per friction point (illustrative, conservative)
+  const est = Math.max(issues, 1) * perIssue;
+  return { issues, est };
 }
 
 function Snippet({ s }) {
@@ -40,9 +87,9 @@ function Snippet({ s }) {
     <div className="snippet">
       <div className="snip-head">
         <div><div className="snip-title">{s.title}</div><div className="snip-why">{s.why}</div></div>
-        <button className="snip-copy" onClick={copy}>{copied ? "Copied ✓" : "Copy"}</button>
+        <button className="snip-copy" onClick={copy}>{copied ? "Copied" : "Copy"}</button>
       </div>
-      <div className="snip-where">📍 {s.where}</div>
+      <div className="snip-where">{s.where}</div>
       <pre className="snip-code"><code>{s.code}</code></pre>
     </div>
   );
@@ -56,12 +103,20 @@ export default function Home() {
   const [error, setError] = useState("");
   const [premium, setPremium] = useState(null);
   const [unlocking, setUnlocking] = useState(false);
+  const [showScores, setShowScores] = useState(false);
+  const scoresRef = useRef(null);
 
   useEffect(() => {
     if (!loading) return;
     const t = setInterval(() => setMsgIdx((i) => (i + 1) % SCAN_MSGS.length), 1400);
     return () => clearInterval(t);
   }, [loading]);
+
+  // trigger ring animation shortly after results render
+  useEffect(() => {
+    if (data) { const t = setTimeout(() => setShowScores(true), 200); return () => clearTimeout(t); }
+    setShowScores(false);
+  }, [data]);
 
   const fetchPremium = useCallback(async (orderId, auditUrl) => {
     setUnlocking(true); setError("");
@@ -106,17 +161,17 @@ export default function Home() {
 
   const ps = data?.pagespeed, seo = data?.seo;
   const showResults = data || loading || unlocking || premium;
+  const leak = computeLeak(data);
 
   return (
     <>
-      <div className="ticker">🚀 TRUSTED BY D2C BRANDS &amp; SHOPIFY STORES &nbsp;·&nbsp; <b>FREE INSTANT AUDIT</b> &nbsp;·&nbsp; FIX-KIT FROM <b>₹399</b> &nbsp;·&nbsp; BY DIGISTICK</div>
+      <div className="ticker">TRUSTED BY D2C BRANDS &amp; SHOPIFY STORES &nbsp;·&nbsp; <b>FREE INSTANT AUDIT</b> &nbsp;·&nbsp; FIX-KIT FROM <b>₹399</b> &nbsp;·&nbsp; BY DIGISTICK</div>
 
       <div className="nav">
         <div className="logo">DIGI<span className="sq">STICK</span></div>
         <a className="nav-cta" href="https://digistick.in" target="_blank" rel="noopener noreferrer">Work with us</a>
       </div>
 
-      {/* HERO */}
       <section className="hero">
         <span className="hero-pill">Free Website Audit Tool</span>
         <h1>Your store is<br />leaking <span className="y">sales</span>.<br />Find out <span className="r">where</span>.</h1>
@@ -133,7 +188,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* TOOL / RESULTS */}
       <section className="sec tool" id="tool">
         <div className="sec-inner">
           {loading && <div className="scanning"><div className="scanline" /><div className="status">{SCAN_MSGS[msgIdx]}</div></div>}
@@ -143,18 +197,18 @@ export default function Home() {
             <>
               {ps && (<>
                 <div className="section-label">Health scores</div>
-                <div className="gauges">
-                  <Ring value={ps.scores.performance} name="Performance" />
-                  <Ring value={ps.scores.seo} name="SEO" />
-                  <Ring value={ps.scores.accessibility} name="Accessibility" />
-                  <Ring value={ps.scores.bestPractices} name="Best Practices" />
+                <div className="gauges anim" ref={scoresRef}>
+                  <Ring value={ps.scores.performance} name="Performance" run={showScores} />
+                  <Ring value={ps.scores.seo} name="SEO" run={showScores} />
+                  <Ring value={ps.scores.accessibility} name="Accessibility" run={showScores} />
+                  <Ring value={ps.scores.bestPractices} name="Best Practices" run={showScores} />
                 </div>
               </>)}
               {data.pagespeedError && <p className="err">Performance scan unavailable: {data.pagespeedError}</p>}
 
               {seo && (<>
                 <div className="section-label">On-page SEO &amp; technical</div>
-                <div className="checks">
+                <div className="checks anim">
                   {seo.checks.map((c) => (
                     <div className="check" key={c.label}>
                       <span className={`icon ${c.ok ? "ok" : "no"}`}>{c.ok ? "✓" : "✕"}</span>
@@ -179,37 +233,88 @@ export default function Home() {
                   </div>
                   <div className="section-label">★ Shopify CRO snippets — copy &amp; paste</div>
                   {premium.snippets.map((s) => <Snippet key={s.id} s={s} />)}
-                  <button className="pdf-btn" onClick={() => window.print()}>⬇ Download / print full report (PDF)</button>
+                  <button className="pdf-btn" onClick={() => window.print()}>Download / print full report (PDF)</button>
                 </div>
               )}
 
+              {/* ===== SALES SECTION ===== */}
               {!premium && !unlocking && (
-                <div className="pricing">
-                  <div>
-                    <span className="tag tag-yellow">The Fix-Kit</span>
-                    <h3 style={{ marginTop: 14 }}>Stop guessing.<br /><span className="y">Start converting.</span></h3>
-                    <p style={{ color: "rgba(255,255,255,0.7)", marginTop: 12, fontSize: 15, lineHeight: 1.6 }}>Your free scan shows what's broken. The ₹399 fix-kit shows you exactly how to fix it — with ready-to-paste code.</p>
+                <div className="sales">
+                  {leak && (
+                    <div className="leak-banner">
+                      <div className="leak-left">
+                        <div className="leak-label">⚠ Estimated revenue leak</div>
+                        <div className="leak-big">≈ ₹{leak.est.toLocaleString("en-IN")}<span>/month</span></div>
+                        <div className="leak-sub">from <b>{leak.issues} unfixed issue{leak.issues !== 1 ? "s" : ""}</b> found on your store right now*</div>
+                      </div>
+                      <div className="leak-right">
+                        <div className="leak-count">{leak.issues}</div>
+                        <div className="leak-count-label">problems<br />to fix</div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="sales-grid">
+                    {/* LEFT: blurred preview of locked content */}
+                    <div className="locked">
+                      <div className="locked-head">Your full fix-kit is ready 🔒</div>
+                      <div className="blur-wrap">
+                        <div className="blur-content" aria-hidden="true">
+                          <div className="pv-step"><span className="pv-num">1</span><div><div className="pv-t">Rewrite your product title for search + clicks <span className="pv-imp">High</span></div><div className="pv-d">Your current title is hurting discoverability and CTR…</div></div></div>
+                          <div className="pv-step"><span className="pv-num">2</span><div><div className="pv-t">Add COD trust + urgency near Add-to-Cart <span className="pv-imp">High</span></div><div className="pv-d">Reduce checkout anxiety that's costing you orders…</div></div></div>
+                          <div className="pv-step"><span className="pv-num">3</span><div><div className="pv-t">Fix the 11 images with no alt text <span className="pv-imp med">Med</span></div><div className="pv-d">Recover lost organic traffic and accessibility…</div></div></div>
+                          <div className="pv-snip"><div className="pv-snip-t">Low-stock urgency bar — Liquid</div><div className="pv-code">{`{%- assign qty = product.selected... -%}\n<div class="ds-urgency">Only {{ qty }} left!...`}</div></div>
+                        </div>
+                        <div className="lock-overlay">
+                          <div className="lock-ic">🔒</div>
+                          <div className="lock-title">Unlock your complete fix-kit</div>
+                          <div className="lock-sub">7 copy-paste Shopify sections + your full AI roadmap + PDF report</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* RIGHT: offer card */}
+                    <div className="offer">
+                      <span className="tag tag-yellow">The Fix-Kit</span>
+                      <h3 className="offer-h">Stop guessing.<br /><span className="y">Start converting.</span></h3>
+
+                      <div className="value-stack">
+                        <div className="vs-row"><span>AI conversion roadmap (tailored)</span><span className="vs-p">₹1,500</span></div>
+                        <div className="vs-row"><span>7 copy-paste Shopify CRO sections</span><span className="vs-p">₹2,500</span></div>
+                        <div className="vs-row"><span>Urgency · COD trust · sticky cart · more</span><span className="vs-p">included</span></div>
+                        <div className="vs-row"><span>Downloadable branded PDF report</span><span className="vs-p">₹800</span></div>
+                        <div className="vs-row vs-total"><span>Total value</span><span className="vs-strike">₹4,800</span></div>
+                      </div>
+
+                      <div className="price-block">
+                        <div className="price-now">₹399<span> today</span></div>
+                        <div className="price-save">You save 92%</div>
+                      </div>
+
+                      <div className="timer-row">⏳ Your audit &amp; this price are saved for <SessionTimer /> — after that you'll need to re-scan.</div>
+
+                      <button className="btn-yellow big" onClick={unlock} disabled={unlocking}>{unlocking ? "Starting checkout…" : "Unlock my fix-kit for ₹399 →"}</button>
+
+                      <div className="guarantee">✓ Instant access · Secure Cashfree checkout · UPI, cards &amp; netbanking</div>
+                      {error && <div className="err">{error}</div>}
+                    </div>
                   </div>
-                  <div className="price-box">
-                    <div className="price-big">₹399<span> / one-time</span></div>
-                    <ul className="price-perks">
-                      <li>AI conversion roadmap for your store</li>
-                      <li>Copy-paste Shopify CRO snippets</li>
-                      <li>Urgency, COD trust, sticky cart &amp; more</li>
-                      <li>Downloadable PDF report</li>
-                    </ul>
-                    <button className="btn-yellow" onClick={unlock} disabled={unlocking}>{unlocking ? "Starting checkout…" : "Unlock for ₹399"}</button>
-                  </div>
+
+                  <p className="leak-disclaimer">*Estimated impact based on the issues detected in your scan, using conservative D2C benchmarks. Actual results vary by traffic, niche, and execution — it's a directional guide, not a guarantee.</p>
                 </div>
               )}
-              {error && <div className="err">{error}</div>}
+
+              <div className="agency-cta">
+                <h3>Want it <span className="y">done for you</span> instead?</h3>
+                <p>Digistick builds, optimizes, and scales high-converting Shopify stores. Skip the DIY — let our team handle it end to end.</p>
+                <a className="btn-yellow" href="https://digistick.in" target="_blank" rel="noopener noreferrer" style={{ width: "auto", display: "inline-block", padding: "14px 34px" }}>Book a free strategy call</a>
+              </div>
             </>
           )}
         </div>
       </section>
 
-      {/* WHAT WE CHECK */}
-      {!showResults && (
+      {!showResults && (<>
       <section className="sec" style={{ background: "#fff" }}>
         <div className="sec-inner center">
           <span className="tag tag-blue">What we scan</span>
@@ -223,10 +328,7 @@ export default function Home() {
           </div>
         </div>
       </section>
-      )}
 
-      {/* HOW IT WORKS */}
-      {!showResults && (
       <section className="sec">
         <div className="sec-inner center">
           <span className="tag tag-red">How it works</span>
@@ -238,10 +340,7 @@ export default function Home() {
           </div>
         </div>
       </section>
-      )}
 
-      {/* TESTIMONIALS */}
-      {!showResults && (
       <section className="sec" style={{ background: "#fff" }}>
         <div className="sec-inner center">
           <span className="tag tag-dark">Loved by founders</span>
@@ -253,17 +352,14 @@ export default function Home() {
           </div>
         </div>
       </section>
-      )}
 
-      {/* FAQ */}
-      {!showResults && (
       <section className="sec">
         <div className="sec-inner">
           <div className="center"><span className="tag tag-blue">Questions</span><h2 className="sec-title">Good to <span className="blue">know</span></h2></div>
           <div className="faq">
             <div className="faq-item"><div className="faq-q">Is the scan really free?</div><div className="faq-a">Yes. The full audit — scores, SEO checks, issues — is free with no signup. You only pay ₹399 if you want the conversion roadmap and copy-paste fix-kit.</div></div>
             <div className="faq-item"><div className="faq-q">What's actually in the ₹399 fix-kit?</div><div className="faq-a">A prioritized AI conversion roadmap specific to your site, plus ready-to-paste Shopify Liquid snippets — urgency bars, COD trust badges, sticky mobile cart, free-shipping bar, exit-intent offer and more — and a downloadable PDF report.</div></div>
-            <div className="faq-item"><div className="faq-q">Will the code work on my Shopify theme?</div><div className="faq-a">The snippets are written as standard Liquid + HTML/CSS that drop into common theme files. Each one tells you exactly where to paste it. They're theme-agnostic and easy to remove.</div></div>
+            <div className="faq-item"><div className="faq-q">Will the code work on my Shopify theme?</div><div className="faq-a">The snippets are standard Liquid + HTML/CSS that drop into common theme files. Each tells you exactly where to paste it. Theme-agnostic and easy to remove.</div></div>
             <div className="faq-item"><div className="faq-q">Can Digistick just do it for me?</div><div className="faq-a">Absolutely — that's our core business. If you'd rather have experts build and optimize your store, book a free strategy call and we'll take it from here.</div></div>
           </div>
           <div className="center" style={{ marginTop: 36 }}>
@@ -271,7 +367,7 @@ export default function Home() {
           </div>
         </div>
       </section>
-      )}
+      </>)}
 
       <footer className="footer">
         <div className="f-logo">DIGI<span className="sq">STICK</span></div>
