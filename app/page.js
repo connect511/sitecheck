@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { THEME } from "./lib/theme";
 
 const SCAN_MSGS = [
   "Resolving URL…", "Running Lighthouse audit…", "Parsing on-page SEO…",
@@ -94,6 +95,47 @@ function computeLeak(data) {
   return { issues, est };
 }
 
+function ChatBox({ context }) {
+  const [msgs, setMsgs] = useState([{ role: "assistant", content: "Hi! Ask me anything about your audit — why a score is low, how to apply a fix, or what to prioritize." }]);
+  const [input, setInput] = useState("");
+  const [busy, setBusy] = useState(false);
+  const endRef = useRef(null);
+  const userTurns = msgs.filter((m) => m.role === "user").length;
+  const capped = userTurns >= 8;
+
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
+
+  async function send() {
+    const text = input.trim();
+    if (!text || busy || capped) return;
+    const next = [...msgs, { role: "user", content: text }];
+    setMsgs(next); setInput(""); setBusy(true);
+    try {
+      const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: next, context }) });
+      const j = await res.json();
+      setMsgs((m) => [...m, { role: "assistant", content: j.reply || "Sorry, try again." }]);
+    } catch {
+      setMsgs((m) => [...m, { role: "assistant", content: "Network issue — please try again." }]);
+    } finally { setBusy(false); }
+  }
+
+  return (
+    <div className="chatbox">
+      <div className="chat-msgs">
+        {msgs.map((m, i) => <div key={i} className={`chat-msg ${m.role}`}>{m.content}</div>)}
+        {busy && <div className="chat-msg assistant typing">Thinking…</div>}
+        <div ref={endRef} />
+      </div>
+      <div className="chat-input">
+        <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()}
+          placeholder={capped ? "Chat limit reached for this report" : "Ask about your audit…"} disabled={capped || busy} />
+        <button onClick={send} disabled={capped || busy || !input.trim()}>Send</button>
+      </div>
+      {capped && <div className="chat-cap">You've used your questions for this report. Need more? <a href="https://digistick.in" target="_blank" rel="noopener noreferrer">Book a free Digistick call →</a></div>}
+    </div>
+  );
+}
+
 function copyText(e, text) {
   navigator.clipboard.writeText(text);
   const btn = e.currentTarget; const old = btn.innerText;
@@ -164,6 +206,7 @@ export default function Home() {
   const [premium, setPremium] = useState(null);
   const [unlocking, setUnlocking] = useState(false);
   const [showScores, setShowScores] = useState(false);
+  const [themeStatus, setThemeStatus] = useState("");
   const scoresRef = useRef(null);
 
   useEffect(() => {
@@ -192,6 +235,21 @@ export default function Home() {
     const params = new URLSearchParams(window.location.search);
     const orderId = params.get("order_id");
     const auditUrl = params.get("audit");
+    const product = params.get("product");
+    if (orderId && product === "theme") {
+      // Theme purchase returned — verify + trigger secure download.
+      setThemeStatus("verifying");
+      fetch("/api/theme-download?order_id=" + encodeURIComponent(orderId))
+        .then(async (r) => {
+          if (r.redirected) { window.location.href = r.url; return; }
+          const j = await r.json().catch(() => ({}));
+          setThemeStatus(r.ok ? (j.message || "Payment verified — your theme is on its way!") : "We couldn't verify that payment.");
+        })
+        .catch(() => setThemeStatus("Something went wrong verifying your theme order."));
+      if (auditUrl) setUrl(auditUrl);
+      window.history.replaceState({}, "", "/");
+      return;
+    }
     if (orderId && auditUrl) { setUrl(auditUrl); fetchPremium(orderId, auditUrl); window.history.replaceState({}, "", "/"); }
   }, [fetchPremium]);
 
@@ -219,13 +277,25 @@ export default function Home() {
   async function unlock() {
     setUnlocking(true); setError("");
     try {
-      const res = await fetch("/api/order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: data?.url || url }) });
+      const res = await fetch("/api/order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: data?.url || url, product: "report" }) });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Could not start checkout.");
       await loadCashfree();
       const cashfree = window.Cashfree({ mode: "sandbox" });
       cashfree.checkout({ paymentSessionId: json.paymentSessionId, redirectTarget: "_self" });
     } catch (e) { setError(e.message); setUnlocking(false); }
+  }
+
+  async function buyTheme() {
+    setError("");
+    try {
+      const res = await fetch("/api/order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: data?.url || url, product: "theme" }) });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Could not start checkout.");
+      await loadCashfree();
+      const cashfree = window.Cashfree({ mode: "sandbox" });
+      cashfree.checkout({ paymentSessionId: json.paymentSessionId, redirectTarget: "_self" });
+    } catch (e) { setError(e.message); }
   }
 
   const ps = data?.pagespeed, seo = data?.seo;
@@ -259,6 +329,7 @@ export default function Home() {
 
       <section className="sec tool" id="tool">
         <div className="sec-inner">
+          {themeStatus && <div className="theme-status">{themeStatus}</div>}
           {loading && <div className="scanning"><div className="scanline" /><div className="status">{SCAN_MSGS[msgIdx]}</div></div>}
           {unlocking && !premium && <div className="scanning"><div className="scanline" /><div className="status">Confirming payment &amp; building your premium fix-kit…</div></div>}
 
@@ -395,6 +466,31 @@ export default function Home() {
                   <div className="section-label">★ Copy-paste Shopify CRO snippets</div>
                   {premium.snippets.map((s) => <Snippet key={s.id} s={s} />)}
                   <button className="pdf-btn" onClick={() => window.print()}>Download / print full report (PDF)</button>
+
+                  {/* AI assistant — only inside the paid report */}
+                  <div className="section-label">★ Ask the CRO assistant</div>
+                  <ChatBox context={{ url: premium.url, scores: data?.pagespeed?.scores, failed: (data?.seo?.checks || []).filter((c) => !c.ok).map((c) => c.label) }} />
+
+                  {/* Theme upsell */}
+                  {THEME.enabled && (
+                    <div className="theme-upsell">
+                      <div className="tu-tag">Recommended upgrade</div>
+                      <div className="tu-grid">
+                        <div>
+                          <h3 className="tu-h">{THEME.name}</h3>
+                          <p className="tu-sub">{THEME.tagline}</p>
+                          <ul className="tu-feats">{THEME.features.map((f, i) => <li key={i}>{f}</li>)}</ul>
+                        </div>
+                        <div className="tu-buy">
+                          <div className="tu-price"><span className="tu-strike">₹{THEME.marketPrice.toLocaleString("en-IN")}</span><span className="tu-now">₹{THEME.price.toLocaleString("en-IN")}</span></div>
+                          <div className="tu-save">You save ₹{(THEME.marketPrice - THEME.price).toLocaleString("en-IN")}</div>
+                          <a className="tu-preview" href={THEME.previewUrl} target="_blank" rel="noopener noreferrer">👁 View live demo</a>
+                          <button className="btn-yellow" style={{ marginTop: 10 }} onClick={buyTheme}>Get the theme for ₹{THEME.price.toLocaleString("en-IN")}</button>
+                          <div className="tu-note">Instant download after payment · secure Cashfree checkout</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
