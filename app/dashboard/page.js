@@ -5,6 +5,7 @@ import { getSupabase, supabaseConfigured } from "../lib/supabaseClient";
 import AuthModal from "../AuthModal";
 
 const TABS = ["Overview", "Issues", "How to fix", "History", "Competitor", "Fix-kit", "Settings"];
+const NAV_ICON = { "Overview": "▦", "Issues": "⚠", "How to fix": "🛠", "History": "📈", "Competitor": "⚔", "Fix-kit": "🎁", "Settings": "⚙" };
 
 function color(v) {
   if (v == null) return "var(--d-muted)";
@@ -58,7 +59,26 @@ export default function Dashboard() {
   const [compData, setCompData] = useState(null);
   const [busy, setBusy] = useState("");
   const [reports, setReports] = useState([]);
+  const [launchLeft, setLaunchLeft] = useState("48:00:00");
   const configured = supabaseConfigured();
+
+  // Launch discount countdown — 7 days from first visit (stored per browser so it's consistent, not fake-resetting)
+  useEffect(() => {
+    let end;
+    try {
+      const saved = window.localStorage.getItem("ds_launch_end");
+      if (saved) end = parseInt(saved, 10);
+      else { end = Date.now() + 7 * 24 * 3600 * 1000; window.localStorage.setItem("ds_launch_end", String(end)); }
+    } catch { end = Date.now() + 7 * 24 * 3600 * 1000; }
+    const tick = () => {
+      const ms = Math.max(0, end - Date.now());
+      const d = Math.floor(ms / 86400000), h = Math.floor((ms % 86400000) / 3600000), m = Math.floor((ms % 3600000) / 60000);
+      setLaunchLeft(d > 0 ? `${d}d ${h}h ${m}m` : `${h}h ${m}m`);
+    };
+    tick();
+    const id = setInterval(tick, 60000);
+    return () => clearInterval(id);
+  }, []);
 
   const token = useCallback(async () => {
     const sb = getSupabase(); if (!sb) return null;
@@ -165,6 +185,50 @@ export default function Dashboard() {
             <input value={newUrl} onChange={(e) => setNewUrl(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addSite()} placeholder="add yourstore.com" />
             <button onClick={addSite} disabled={busy === "adding"}>{busy === "adding" ? "…" : "Add"}</button>
           </div>
+
+          {activeSite && (
+            <>
+              <div className="side-label" style={{ marginTop: 24 }}>Menu</div>
+              <nav className="side-nav">
+                {TABS.map((t) => {
+                  const proTab = ["History", "Settings"].includes(t);
+                  return (
+                    <button key={t} className={`side-nav-item ${tab === t ? "on" : ""}`} onClick={() => setTab(t)}>
+                      <span className="sni-ic">{NAV_ICON[t]}</span>
+                      <span className="sni-label">{t}</span>
+                      {t === "Issues" && failed.length > 0 && <span className="sni-badge">{failed.length}</span>}
+                      {proTab && !isPro && <span className="sni-lock">🔒</span>}
+                    </button>
+                  );
+                })}
+              </nav>
+            </>
+          )}
+
+          {/* persistent Pro card */}
+          {activeSite && !isPro && (
+            <div className="side-pro">
+              <div className="side-pro-glow" />
+              <div className="side-pro-tag">⚡ UPGRADE</div>
+              <div className="side-pro-h">Unlock Pro</div>
+              <ul className="side-pro-list">
+                <li>Score history & trends</li>
+                <li>Saved fix-kit & blueprint</li>
+                <li>Scheduled scans + alerts</li>
+                <li>AI assistant access</li>
+              </ul>
+              <div className="side-pro-price"><span className="spp-old">₹1,499</span><span className="spp-new">₹799</span></div>
+              <div className="side-pro-timer">🔥 Launch price ends in {launchLeft}</div>
+              <a className="side-pro-btn" href={"/?audit=" + encodeURIComponent(activeSite.url)}>Upgrade now</a>
+            </div>
+          )}
+          {activeSite && isPro && (
+            <div className="side-pro on">
+              <div className="side-pro-tag good">✓ PRO ACTIVE</div>
+              <div className="side-pro-h">You're on Pro</div>
+              <p className="side-pro-thanks">All features unlocked for this site. Thank you!</p>
+            </div>
+          )}
         </aside>
 
         <main className="dsh-main">
@@ -179,10 +243,6 @@ export default function Dashboard() {
                 </div>
                 <button className="d-rescan" onClick={() => runScan(activeSite.url, activeSite.id)} disabled={busy === "scanning"}>{busy === "scanning" ? "Scanning…" : "↻ Re-scan now"}</button>
               </div>
-
-              <nav className="dsh-tabs">
-                {TABS.map((t) => <button key={t} className={tab === t ? "on" : ""} onClick={() => setTab(t)}>{t}{t === "Issues" && failed.length > 0 && <span className="tab-badge">{failed.length}</span>}</button>)}
-              </nav>
 
               {!latest && tab !== "Settings" && <div className="dsh-empty"><h3>No scan yet</h3><p>Hit "Re-scan now" to run the first audit on this store.</p></div>}
 
@@ -227,6 +287,28 @@ export default function Dashboard() {
                       <div className="ov-next-h">Fix these first</div>
                       {priority.slice(0, 3).map((c) => <div className="ov-next-item" key={c.label}><span className="dot bad" />{c.label}<span className="ov-next-d">{c.detail}</span></div>)}
                       <button className="ov-next-all" onClick={() => setTab("Issues")}>See all {failed.length} issues →</button>
+                    </div>
+                  )}
+
+                  {/* Free vs Pro comparison — conversion driver */}
+                  {!isPro && (
+                    <div className="cmp-pro">
+                      <div className="cmp-pro-h">
+                        <div><h3>You're on the Free plan</h3><p>You can see the problems. Pro gives you the fixes, tracking, and tools to actually solve them.</p></div>
+                        <div className="cmp-pro-save">Save ₹700 · launch price</div>
+                      </div>
+                      <div className="cmp-pro-grid">
+                        <div className="cmp-col-h"></div><div className="cmp-col-h free">Free</div><div className="cmp-col-h pro">Pro ₹799</div>
+                        {[["Site health score & issues", true, true], ["Prioritized fix list", true, true], ["How-to-fix guidance", "Basic", "Full + copy-paste code"], ["Score history & trends", false, true], ["Saved fix-kit & growth blueprint", false, true], ["Scheduled scans + drop alerts", false, true], ["AI assistant", false, true]].map(([label, f, p], i) => (
+                          <div className="cmp-line" key={i}>
+                            <div className="cmp-feat">{label}</div>
+                            <div className="cmp-cell">{f === true ? "✓" : f === false ? "—" : <span className="cmp-part">{f}</span>}</div>
+                            <div className="cmp-cell pro">{p === true ? "✓" : <span className="cmp-part">{p}</span>}</div>
+                          </div>
+                        ))}
+                      </div>
+                      <a className="cmp-pro-btn" href={"/?audit=" + encodeURIComponent(activeSite.url)}>Unlock Pro for {activeSite.url.replace(/^https?:\/\//, "").replace(/\/$/, "")} — ₹799</a>
+                      <div className="cmp-pro-note">🔥 Launch price ends in {launchLeft} · one-time payment, no subscription</div>
                     </div>
                   )}
                 </div>
