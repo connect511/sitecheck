@@ -747,3 +747,17 @@ body { background: var(--cream); color: var(--ink); font-family: var(--font); -w
 .cmp-pro-note { text-align:center; color:var(--d-muted); font-size:12px; margin-top:10px; }
 
 @media (max-width:860px){ .cmp-pro-grid { font-size:12px; } .side-pro { margin-top:20px; } }
+
+/* ===== v17: legal pages + footer legal ===== */
+.f-legal { margin-top:14px; font-size:12px; color:var(--muted); }
+.f-legal a { color:var(--muted); text-decoration:underline; }
+.f-legal a:hover { color:var(--ink); }
+.legal { max-width:760px; margin:0 auto; padding:50px 24px 80px; font-family:var(--font); color:var(--ink); line-height:1.7; }
+.legal-logo { font-weight:900; font-size:22px; text-decoration:none; color:var(--ink); display:inline-block; margin-bottom:30px; }
+.legal-logo span { color:var(--blue); }
+.legal h1 { font-size:34px; font-weight:900; margin-bottom:6px; }
+.legal-date { color:var(--muted); font-size:13px; margin-bottom:24px; }
+.legal h2 { font-size:18px; font-weight:800; margin:26px 0 8px; }
+.legal p { margin-bottom:12px; font-size:15px; }
+.legal a { color:var(--blue); }
+.legal-foot { margin-top:36px; padding-top:20px; border-top:1px solid var(--line); font-size:14px; }
