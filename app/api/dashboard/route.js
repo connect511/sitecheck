@@ -23,12 +23,20 @@ export async function POST(req) {
     if (action === "list") {
       const { data: sites } = await admin.from("sites").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
       const siteIds = (sites || []).map((s) => s.id);
-      let scans = [];
+      let scans = [], reports = [];
       if (siteIds.length) {
-        const { data } = await admin.from("scans").select("*").in("site_id", siteIds).order("created_at", { ascending: false });
-        scans = data || [];
+        const { data: sc } = await admin.from("scans").select("*").in("site_id", siteIds).order("created_at", { ascending: false });
+        scans = sc || [];
+        const { data: rp } = await admin.from("reports").select("id,site_id,created_at").in("site_id", siteIds).order("created_at", { ascending: false });
+        reports = rp || [];
       }
-      return Response.json({ sites: sites || [], scans });
+      return Response.json({ sites: sites || [], scans, reports });
+    }
+
+    if (action === "removeSite") {
+      const { site_id } = payload || {};
+      await admin.from("sites").delete().eq("id", site_id).eq("user_id", user.id);
+      return Response.json({ ok: true });
     }
 
     if (action === "addSite") {
