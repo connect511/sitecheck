@@ -308,7 +308,10 @@ export default function Home() {
 
       <div className="nav">
         <div className="logo">DIGI<span className="sq">STICK</span></div>
-        <a className="nav-cta" href="https://digistick.in" target="_blank" rel="noopener noreferrer">Need help implementing?</a>
+        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <a className="nav-link" href="/dashboard">Dashboard</a>
+          <a className="nav-cta" href="https://digistick.in" target="_blank" rel="noopener noreferrer">Need help implementing?</a>
+        </div>
       </div>
 
       <section className="hero">
@@ -465,6 +468,75 @@ export default function Home() {
                           </label>
                         ))}
                       </div>
+                    </>
+                  )}
+
+                  {/* Growth blueprint */}
+                  {premium.growth && (
+                    <>
+                      <div className="section-label">★ Your growth blueprint</div>
+
+                      {premium.growth.meta && (
+                        <div className="growth-card">
+                          <div className="growth-h"><span className="g-ic ib-blue">📣</span> Meta Ads campaign plan</div>
+                          <p className="growth-sub">{premium.growth.meta.summary}</p>
+                          <div className="g-budget">💰 {premium.growth.meta.budget}</div>
+                          <div className="funnel">
+                            {(premium.growth.meta.campaigns || []).map((c, i) => (
+                              <div className="funnel-stage" key={i}>
+                                <div className="fs-name">{c.stage}</div>
+                                <div className="fs-row"><b>Audience:</b> {c.audience}</div>
+                                <div className="fs-row"><b>Objective:</b> {c.objective}</div>
+                                <div className="fs-row"><b>Angle:</b> {c.angle}</div>
+                              </div>
+                            ))}
+                          </div>
+                          {premium.growth.meta.adCopy?.length > 0 && (
+                            <div className="g-adcopy">
+                              <div className="g-adcopy-h">Ad copy starters</div>
+                              {premium.growth.meta.adCopy.map((a, i) => (
+                                <div className="fix-line" key={i}><span>{a}</span><button className="copy-mini" onClick={(e) => copyText(e, a)}>Copy</button></div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {premium.growth.google && (
+                        <div className="growth-card">
+                          <div className="growth-h"><span className="g-ic ib-red">🔍</span> Google Ads plan</div>
+                          <p className="growth-sub">{premium.growth.google.summary}</p>
+                          <div className="g-cols">
+                            <div><div className="g-col-h">Campaigns to run</div><ul className="g-list">{(premium.growth.google.campaigns || []).map((c, i) => <li key={i}>{c}</li>)}</ul></div>
+                            <div><div className="g-col-h">Target keywords</div><ul className="g-list">{(premium.growth.google.keywords || []).map((c, i) => <li key={i}>{c}</li>)}</ul></div>
+                            <div><div className="g-col-h">Negative keywords</div><ul className="g-list neg">{(premium.growth.google.negatives || []).map((c, i) => <li key={i}>{c}</li>)}</ul></div>
+                          </div>
+                        </div>
+                      )}
+
+                      {premium.growth.merchant && (
+                        <div className="growth-card">
+                          <div className="growth-h"><span className="g-ic ib-yellow">🛍️</span> Google Merchant Center &amp; product feed</div>
+                          <p className="growth-sub">{premium.growth.merchant.summary}</p>
+                          <ol className="g-steps">{(premium.growth.merchant.steps || []).map((s, i) => <li key={i}>{s}</li>)}</ol>
+                        </div>
+                      )}
+
+                      {premium.growth.ecosystem?.length > 0 && (
+                        <div className="growth-card">
+                          <div className="growth-h"><span className="g-ic ib-orange">🌐</span> Your full e-commerce ecosystem</div>
+                          <p className="growth-sub">The order to build your growth engine — each layer feeds the next.</p>
+                          <div className="eco">
+                            {premium.growth.ecosystem.map((l, i) => (
+                              <div className="eco-layer" key={i}>
+                                <span className="eco-num">{i + 1}</span>
+                                <div><div className="eco-name">{l.layer}</div><div className="eco-items">{l.items}</div></div>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="eco-cta">Want Digistick to build this entire ecosystem for you? <a href="https://digistick.in" target="_blank" rel="noopener noreferrer">Book a free strategy call →</a></div>
+                        </div>
+                      )}
                     </>
                   )}
 
