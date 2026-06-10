@@ -761,3 +761,12 @@ body { background: var(--cream); color: var(--ink); font-family: var(--font); -w
 .legal p { margin-bottom:12px; font-size:15px; }
 .legal a { color:var(--blue); }
 .legal-foot { margin-top:36px; padding-top:20px; border-top:1px solid var(--line); font-size:14px; }
+
+/* ===== v18: signup gate on homepage ===== */
+.gate { background: linear-gradient(135deg, #eef4ff, #fff7e6); border: 2px solid var(--blue); border-radius: 22px; padding: 40px 30px; text-align: center; margin: 8px 0 20px; }
+.gate-lock { font-size: 40px; margin-bottom: 10px; }
+.gate h3 { font-size: 24px; font-weight: 900; margin-bottom: 8px; }
+.gate p { color: var(--muted); font-size: 15px; line-height: 1.6; max-width: 460px; margin: 0 auto 20px; }
+.gate-btn { background: var(--blue); color: #fff; border: 0; border-radius: 50px; font-weight: 800; font-size: 16px; padding: 15px 34px; cursor: pointer; font-family: var(--font); }
+.gate-btn:hover { opacity: .94; }
+.gate-sub { color: var(--muted); font-size: 12.5px; margin-top: 12px; }
