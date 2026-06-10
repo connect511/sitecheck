@@ -4,7 +4,7 @@ export const runtime = "nodejs";
 // SDK needs to open checkout. Amount is fixed server-side (₹399) so the client
 // can never tamper with the price.
 
-const PRICE = 399; // INR
+const PRICE = 799; // INR
 
 function cfBase() {
   // Use sandbox while testing; switch to production by setting CASHFREE_ENV=production
