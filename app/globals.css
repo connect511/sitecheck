@@ -818,3 +818,57 @@ body { background: var(--cream); color: var(--ink); font-family: var(--font); -w
 .dsh-scan-bar { width:260px; height:6px; background:var(--d-line,#ece8f0); border-radius:50px; overflow:hidden; margin-top:22px; }
 .dsh-scan-bar span { display:block; height:100%; width:40%; background:var(--d-blue,#2563EB); border-radius:50px; animation:dshbar 1.3s ease-in-out infinite; }
 @keyframes dshbar { 0%{ margin-left:-40%; } 100%{ margin-left:100%; } }
+
+/* ===== v22: colorful Learnify-style Overview + mobile alignment ===== */
+.ovx-greet { position:relative; display:flex; align-items:center; justify-content:space-between; gap:20px; background:linear-gradient(120deg,#2563EB,#5b3df5 55%,#7c3aed); color:#fff; border-radius:22px; padding:26px 28px; overflow:hidden; margin-bottom:16px; }
+.ovx-greet-glow { position:absolute; top:-50px; right:-30px; width:200px; height:200px; background:#FFD166; opacity:.3; filter:blur(55px); border-radius:50%; }
+.ovx-greet-l { position:relative; z-index:1; }
+.ovx-greet-l h2 { font-size:25px; font-weight:900; margin-bottom:5px; }
+.ovx-greet-l p { font-size:13.5px; color:rgba(255,255,255,.85); }
+.ovx-greet-r { position:relative; z-index:1; display:flex; align-items:center; gap:14px; background:rgba(255,255,255,.12); border:1px solid rgba(255,255,255,.18); border-radius:18px; padding:12px 18px; }
+.ovx-health-meta { display:flex; flex-direction:column; gap:3px; }
+.ovx-health-lbl { font-size:11px; text-transform:uppercase; letter-spacing:.5px; color:rgba(255,255,255,.75); font-weight:700; }
+.ovx-delta { font-size:13px; font-weight:800; }
+.ovx-delta.up { color:#86efac; } .ovx-delta.down { color:#fca5a5; }
+/* gauge sits on colored bg here */
+.ovx-health .gauge { background:transparent; }
+.ovx-health .gauge-v { color:#fff !important; }
+.ovx-health .gauge-b { color:rgba(255,255,255,.8); }
+
+.ovx-tiles { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:16px; }
+.ovx-tile { border-radius:20px; padding:18px; color:#222; position:relative; overflow:hidden; }
+.tile-yellow { background:linear-gradient(150deg,#FFE38A,#FFC93C); }
+.tile-purple { background:linear-gradient(150deg,#E5D5FF,#C9A7FF); }
+.tile-blue { background:linear-gradient(150deg,#CBE3FF,#9CC6FF); }
+.tile-green { background:linear-gradient(150deg,#C8F1D6,#92E3AE); }
+.ovx-tile-top { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+.ovx-tile-ic { font-size:20px; }
+.ovx-tile-badge { background:rgba(0,0,0,.12); color:rgba(0,0,0,.7); font-size:10px; font-weight:800; padding:3px 9px; border-radius:50px; text-transform:uppercase; letter-spacing:.3px; }
+.ovx-tile-v { font-size:34px; font-weight:900; line-height:1; }
+.ovx-tile-v span { font-size:14px; font-weight:700; opacity:.5; }
+.ovx-tile-l { font-size:13px; font-weight:700; margin:6px 0 12px; opacity:.85; }
+.ovx-tile-bar { height:7px; background:rgba(0,0,0,.12); border-radius:50px; overflow:hidden; }
+.ovx-tile-bar span { display:block; height:100%; background:rgba(0,0,0,.55); border-radius:50px; transition:width .6s; }
+
+.ovx-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:16px; }
+.ovx-stat { background:#fff; border:1px solid var(--d-line,#ece8f0); border-radius:16px; padding:18px; text-align:center; }
+.ovx-stat-n { font-size:28px; font-weight:900; }
+.ovx-stat-n.good { color:#16a34a; } .ovx-stat-n.bad { color:#FF4D4D; } .ovx-stat-n.pro { color:#7c3aed; }
+.ovx-stat-l { font-size:12px; color:var(--d-muted,#6b6478); font-weight:600; margin-top:4px; }
+
+/* ---- mobile alignment fixes (phone view) ---- */
+@media (max-width:900px){
+  .dsh-grid { grid-template-columns:1fr !important; }
+  .dsh-side { position:static !important; width:auto !important; height:auto !important; margin-bottom:14px; }
+  .ovx-tiles { grid-template-columns:repeat(2,1fr); }
+  .ovx-stats { grid-template-columns:repeat(2,1fr); }
+}
+@media (max-width:560px){
+  .ovx-greet { flex-direction:column; align-items:flex-start; text-align:left; }
+  .ovx-greet-r { width:100%; justify-content:flex-start; }
+  .ovx-greet-l h2 { font-size:21px; }
+  .ovx-tiles { grid-template-columns:1fr 1fr; gap:10px; }
+  .ovx-tile { padding:14px; }
+  .ovx-tile-v { font-size:28px; }
+  .dsh-main { padding:16px !important; }
+}
