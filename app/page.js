@@ -211,6 +211,7 @@ export default function Home() {
   const [themeStatus, setThemeStatus] = useState("");
   const [user, setUser] = useState(null);
   const [authOpen, setAuthOpen] = useState(false);
+  const [pendingUrl, setPendingUrl] = useState("");
   const [savingToAccount, setSavingToAccount] = useState(false);
   const scoresRef = useRef(null);
 
@@ -319,14 +320,33 @@ export default function Home() {
 
   async function runAudit() {
     if (!url.trim()) return;
+    // GATE: if not logged in (and not preview), require signup BEFORE scanning.
+    const isPreview = new URLSearchParams(window.location.search).get("preview") === "1";
+    if (!user && supabaseConfigured() && !isPreview) {
+      setPendingUrl(url);
+      setAuthOpen(true);
+      return;
+    }
+    await doScan(url);
+  }
+
+  // Actual scan — runs after auth (or immediately if already logged in / preview).
+  async function doScan(targetUrl) {
     setLoading(true); setError(""); setData(null); setPremium(null); setMsgIdx(0);
     document.getElementById("tool")?.scrollIntoView({ behavior: "smooth" });
     try {
-      const res = await fetch("/api/audit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url }) });
+      const res = await fetch("/api/audit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: targetUrl }) });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Scan failed");
       setData(json);
-      // TEMP preview: add ?preview=1 to the URL to view the unlocked premium report without paying.
+      // Save to the logged-in user's account, then send them to the dashboard where results live.
+      const sb = getSupabase();
+      const sess = sb ? (await sb.auth.getSession()).data?.session : null;
+      if (sess?.access_token) {
+        await saveScanToAccount(json);
+        window.location.href = "/dashboard";
+        return;
+      }
       if (new URLSearchParams(window.location.search).get("preview") === "1") {
         setUnlocking(true);
         try {
@@ -790,11 +810,10 @@ export default function Home() {
           onAuthed={async (u) => {
             setUser(u);
             setAuthOpen(false);
-            // Save the just-scanned site to their account, then send them to the dashboard.
-            if (data) {
-              await saveScanToAccount(data);
-              window.location.href = "/dashboard";
-            }
+            // If they were trying to scan, run it now → saves to account → dashboard.
+            const target = pendingUrl || url;
+            if (target) { setPendingUrl(""); await doScan(target); }
+            else if (data) { await saveScanToAccount(data); window.location.href = "/dashboard"; }
           }}
         />
       )}
