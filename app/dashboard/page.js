@@ -13,7 +13,20 @@ function color(v) {
   if (v >= 50) return "#d97706";
   return "#dc2626";
 }
-function band(v) { if (v == null) return "—"; if (v >= 90) return "Good"; if (v >= 50) return "Needs work"; return "Poor"; }
+// Overall health is an average, so it needs gentler bands than per-metric Google scores.
+function overallColor(v) {
+  if (v == null) return "var(--d-muted)";
+  if (v >= 70) return "#16a34a";
+  if (v >= 50) return "#d97706";
+  return "#dc2626";
+}
+function band(v) {
+  if (v == null) return "—";
+  if (v >= 85) return "Excellent";
+  if (v >= 70) return "Good";
+  if (v >= 50) return "Needs work";
+  return "Poor";
+}
 
 function Gauge({ value, size = 132 }) {
   const r = size / 2 - 12, c = 2 * Math.PI * r, pct = value == null ? 0 : value / 100;
@@ -21,11 +34,11 @@ function Gauge({ value, size = 132 }) {
     <div className="gauge" style={{ width: size, height: size }}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--d-line)" strokeWidth="10" />
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color(value)} strokeWidth="10" strokeLinecap="round"
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={overallColor(value)} strokeWidth="10" strokeLinecap="round"
           strokeDasharray={c} strokeDashoffset={c * (1 - pct)} transform={`rotate(-90 ${size / 2} ${size / 2})`} style={{ transition: "stroke-dashoffset .6s" }} />
       </svg>
       <div className="gauge-c">
-        <div className="gauge-v" style={{ color: color(value) }}>{value ?? "—"}</div>
+        <div className="gauge-v" style={{ color: overallColor(value) }}>{value ?? "—"}</div>
         <div className="gauge-b">{band(value)}</div>
       </div>
     </div>
@@ -254,8 +267,8 @@ export default function Dashboard() {
                       <h2>Welcome back{user.email ? ", " + user.email.split("@")[0] : ""}! 👋</h2>
                       <p>{new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })}</p>
                     </div>
-                    <div className={`ov-greet-badge ${latest.overall >= 90 ? "good" : latest.overall >= 50 ? "ok" : "low"}`}>
-                      {latest.overall >= 90 ? "🎉 Your store is in great shape!" : latest.overall >= 50 ? "👍 Good progress — a few fixes to go." : "⚡ Big wins available — let's fix the leaks."}
+                    <div className={`ov-greet-badge ${latest.overall >= 70 ? "good" : latest.overall >= 50 ? "ok" : "low"}`}>
+                      {latest.overall >= 85 ? "🎉 Your store is in great shape!" : latest.overall >= 70 ? "👍 Looking good — a few fixes left." : latest.overall >= 50 ? "⚙ Solid base — clear wins ahead." : "⚡ Big wins available — let's fix the leaks."}
                     </div>
                   </div>
                   <div className="ov-hero">
