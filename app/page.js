@@ -336,8 +336,8 @@ export default function Home() {
     document.getElementById("tool")?.scrollIntoView({ behavior: "smooth" });
     try {
       const res = await fetch("/api/audit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: targetUrl }) });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Scan failed");
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json) throw new Error((json && json.error) || "We couldn't scan that site. Check the URL and try again.");
       setData(json);
       // Save to the logged-in user's account, then send them to the dashboard where results live.
       const sb = getSupabase();
