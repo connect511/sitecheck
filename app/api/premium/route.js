@@ -43,7 +43,7 @@ async function callClaude(prompt, maxTokens = 1500) {
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: maxTokens, messages: [{ role: "user", content: prompt }] }),
+      body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: maxTokens, messages: [{ role: "user", content: prompt }] }),
     });
     if (!res.ok) return null;
     const data = await res.json();
