@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { getSupabase, supabaseConfigured } from "../lib/supabaseClient";
 import AuthModal from "../AuthModal";
 
@@ -110,11 +110,18 @@ export default function Dashboard() {
     if (r.sites) { setSites(r.sites); setScans(r.scans || []); setReports(r.reports || []); if (!active && r.sites[0]) setActive(r.sites[0].id); }
   }, [api, active]);
 
+  // One-time cleanup of any duplicate sites from before the find-or-create fix.
+  const dedupedRef = useRef(false);
+  const loadDataDeduped = useCallback(async () => {
+    if (!dedupedRef.current) { dedupedRef.current = true; try { await api("dedupeSites"); } catch {} }
+    await loadData();
+  }, [api, loadData]);
+
   useEffect(() => {
     if (!configured) { setLoading(false); return; }
     const sb = getSupabase();
-    sb.auth.getUser().then(({ data }) => { setUser(data?.user || null); setLoading(false); if (data?.user) loadData(); });
-    const { data: sub } = sb.auth.onAuthStateChange((_e, session) => { setUser(session?.user || null); if (session?.user) loadData(); });
+    sb.auth.getUser().then(({ data }) => { setUser(data?.user || null); setLoading(false); if (data?.user) loadDataDeduped(); });
+    const { data: sub } = sb.auth.onAuthStateChange((_e, session) => { setUser(session?.user || null); if (session?.user) loadDataDeduped(); });
     return () => sub?.subscription?.unsubscribe();
   }, [configured]); // eslint-disable-line
 
@@ -302,6 +309,30 @@ export default function Dashboard() {
                       <button className="ov-next-all" onClick={() => setTab("Issues")}>See all {failed.length} issues →</button>
                     </div>
                   )}
+
+                  {/* Quick actions + insight widgets fill the space and aid navigation */}
+                  <div className="ov-widgets">
+                    <div className="ov-w">
+                      <div className="ov-w-h">⚡ Quick actions</div>
+                      <button className="ov-w-act" onClick={() => runScan(activeSite.url, activeSite.id)} disabled={busy === "scanning"}>{busy === "scanning" ? "Scanning…" : "↻ Re-scan this store"}</button>
+                      <button className="ov-w-act" onClick={() => setTab("Issues")}>⚠ Review {failed.length} open issues</button>
+                      <button className="ov-w-act" onClick={() => setTab("How to fix")}>🛠 See how to fix them</button>
+                      {!isPro && <a className="ov-w-act primary" href={"/?audit=" + encodeURIComponent(activeSite.url) + "&checkout=1"}>🔓 Unlock Pro — ₹799</a>}
+                    </div>
+                    <div className="ov-w">
+                      <div className="ov-w-h">💡 Insight</div>
+                      <p className="ov-w-tip">{
+                        latest.scores?.performance != null && latest.scores.performance < 60
+                          ? "Your Performance score is your biggest lever right now — faster pages directly lift conversions and Google ranking."
+                          : failed.find((c) => /alt/i.test(c.label))
+                          ? "Missing image alt text hurts both accessibility and SEO. It's one of the quickest wins on your list."
+                          : failed.find((c) => /meta description/i.test(c.label))
+                          ? "Adding meta descriptions improves click-through from Google search results — easy ranking win."
+                          : "You're in good shape. Re-scan after each change to watch your score climb and prove the impact."
+                      }</p>
+                      <div className="ov-w-meta">{checks.length} checks · last scan {new Date(latest.created_at).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}</div>
+                    </div>
+                  </div>
 
                   {/* Free vs Pro comparison — conversion driver */}
                   {!isPro && (
