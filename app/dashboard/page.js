@@ -232,7 +232,7 @@ export default function Dashboard() {
               </ul>
               <div className="side-pro-price"><span className="spp-old">₹1,499</span><span className="spp-new">₹799</span></div>
               <div className="side-pro-timer">🔥 Launch price ends in {launchLeft}</div>
-              <a className="side-pro-btn" href={"/?audit=" + encodeURIComponent(activeSite.url)}>Upgrade now</a>
+              <a className="side-pro-btn" href={"/?audit=" + encodeURIComponent(activeSite.url) + "&checkout=1"}>Upgrade now</a>
             </div>
           )}
           {activeSite && isPro && (
@@ -320,7 +320,7 @@ export default function Dashboard() {
                           </div>
                         ))}
                       </div>
-                      <a className="cmp-pro-btn" href={"/?audit=" + encodeURIComponent(activeSite.url)}>Unlock Pro for {activeSite.url.replace(/^https?:\/\//, "").replace(/\/$/, "")} — ₹799</a>
+                      <a className="cmp-pro-btn" href={"/?audit=" + encodeURIComponent(activeSite.url) + "&checkout=1"}>Unlock Pro for {activeSite.url.replace(/^https?:\/\//, "").replace(/\/$/, "")} — ₹799</a>
                       <div className="cmp-pro-note">🔥 Launch price ends in {launchLeft} · one-time payment, no subscription</div>
                     </div>
                   )}
@@ -355,7 +355,7 @@ export default function Dashboard() {
                         <p><b>What's wrong:</b> {c.detail}</p>
                         <p><b>Why it matters:</b> {c.why || "This affects how customers and search engines experience your store."}</p>
                         <p><b>How to fix:</b> {c.fix || "Open the relevant section in your store editor and apply the recommended change. The ₹799 fix-kit gives you copy-paste code for this."}</p>
-                        {!isPro && <a className="fix-pro" href={"/?audit=" + encodeURIComponent(activeSite.url)}>Unlock copy-paste fix in the ₹799 kit →</a>}
+                        {!isPro && <a className="fix-pro" href={"/?audit=" + encodeURIComponent(activeSite.url) + "&checkout=1"}>Unlock copy-paste fix in the ₹799 kit →</a>}
                       </div>
                     </details>
                   ))}
@@ -378,7 +378,7 @@ export default function Dashboard() {
                         ))}
                       </div>
                     </>
-                  ) : <div className="pro-wall"><div><b>Score history is a Pro feature.</b><p>Unlock the ₹799 fix-kit to track your scores over time and prove your fixes are working.</p></div><a className="d-btn-y" href={"/?audit=" + encodeURIComponent(activeSite.url)}>Unlock Pro — ₹799</a></div>}
+                  ) : <div className="pro-wall"><div><b>Score history is a Pro feature.</b><p>Unlock the ₹799 fix-kit to track your scores over time and prove your fixes are working.</p></div><a className="d-btn-y" href={"/?audit=" + encodeURIComponent(activeSite.url) + "&checkout=1"}>Unlock Pro — ₹799</a></div>}
                 </div>
               )}
 
@@ -411,7 +411,7 @@ export default function Dashboard() {
                   <div className="iss-head"><h3>Your saved fix-kit</h3><span>Reports & blueprints you've purchased</span></div>
                   {siteReports.length === 0 ? (
                     isPro ? <div className="dsh-empty sm"><p>Your purchased fix-kit will appear here.</p></div>
-                    : <div className="pro-wall"><div><b>No fix-kit yet.</b><p>Unlock the ₹799 kit to get written fixes, a growth blueprint, and copy-paste snippets saved to your account.</p></div><a className="d-btn-y" href={"/?audit=" + encodeURIComponent(activeSite.url)}>Get the fix-kit — ₹799</a></div>
+                    : <div className="pro-wall"><div><b>No fix-kit yet.</b><p>Unlock the ₹799 kit to get written fixes, a growth blueprint, and copy-paste snippets saved to your account.</p></div><a className="d-btn-y" href={"/?audit=" + encodeURIComponent(activeSite.url) + "&checkout=1"}>Get the fix-kit — ₹799</a></div>
                   ) : siteReports.map((r) => (
                     <div className="kit-item" key={r.id}><div><b>Fix-kit</b><span>{new Date(r.created_at).toLocaleDateString("en-IN")}</span></div><a href={"/?audit=" + encodeURIComponent(activeSite.url)}>Open →</a></div>
                   ))}
@@ -427,7 +427,7 @@ export default function Dashboard() {
                       <select disabled={!isPro} defaultValue={activeSite.scan_freq || "off"} onChange={async (e) => { await api("saveSettings", { site_id: active, scan_freq: e.target.value }); await loadData(); }}><option value="off">Off</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select></div>
                     <div className="set-row"><div><b>Score-drop alerts</b><p>Get an email if your overall health falls.</p></div>
                       <label className="switch"><input type="checkbox" disabled={!isPro} defaultChecked={!!activeSite.alerts_on} onChange={async (e) => { await api("saveSettings", { site_id: active, alerts_on: e.target.checked }); await loadData(); }} /><span /></label></div>
-                    {!isPro && <a className="d-btn-y sm" href={"/?audit=" + encodeURIComponent(activeSite.url)}>Unlock Pro to enable — ₹799</a>}
+                    {!isPro && <a className="d-btn-y sm" href={"/?audit=" + encodeURIComponent(activeSite.url) + "&checkout=1"}>Unlock Pro to enable — ₹799</a>}
                     {isPro && <p className="set-note">Scheduled scans run in the background. You'll see new entries appear under History.</p>}
                   </div>
                   <div className="set-card danger"><div className="set-row"><div><b>Remove site</b><p>Stop tracking this store and delete its scans.</p></div><button className="set-del" onClick={async () => { if (confirm("Remove this site?")) { await api("removeSite", { site_id: active }); setActive(null); await loadData(); } }}>Remove</button></div></div>
