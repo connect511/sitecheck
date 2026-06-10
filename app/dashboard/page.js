@@ -125,6 +125,48 @@ export default function Dashboard() {
     return () => sub?.subscription?.unsubscribe();
   }, [configured]); // eslint-disable-line
 
+  // Internal scan flow: arriving from the homepage with ?scan=URL runs the scan inside the dashboard.
+  const scanQueuedRef = useRef(false);
+  useEffect(() => {
+    if (!user) return;
+    const params = new URLSearchParams(window.location.search);
+
+    // Payment return: ?order_id=...&unlock=URL → verify + flip site to Pro.
+    const orderId = params.get("order_id");
+    const unlockUrl = params.get("unlock");
+    if (orderId && unlockUrl && !scanQueuedRef.current) {
+      scanQueuedRef.current = true;
+      window.history.replaceState({}, "", "/dashboard");
+      (async () => {
+        setBusy("unlocking");
+        try {
+          const r = await api("unlockPro", { url: unlockUrl, orderId });
+          if (r.ok) await loadData();
+          else alert(r.error || "We couldn't verify that payment. If money was deducted, contact support.");
+        } finally { setBusy(""); }
+      })();
+      return;
+    }
+
+    const toScan = params.get("scan");
+    if (toScan && !scanQueuedRef.current) {
+      scanQueuedRef.current = true;
+      window.history.replaceState({}, "", "/dashboard");
+      (async () => {
+        setBusy("scanning");
+        try {
+          const r = await api("addSite", { url: toScan });
+          if (r.site) {
+            setActive(r.site.id); setTab("Overview");
+            const d = await scan(r.site.url);
+            if (d) await api("saveScan", { site_id: r.site.id, scores: d.pagespeed?.scores, checks: d.seo?.checks });
+            await loadData();
+          }
+        } finally { setBusy(""); }
+      })();
+    }
+  }, [user]); // eslint-disable-line
+
   async function scan(url) {
     const res = await fetch("/api/audit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url }) });
     return res.ok ? res.json() : null;
@@ -133,6 +175,19 @@ export default function Dashboard() {
     setBusy("scanning");
     try { const d = await scan(siteUrl); if (d) { await api("saveScan", { site_id: siteId, scores: d.pagespeed?.scores, checks: d.seo?.checks }); await loadData(); } }
     finally { setBusy(""); }
+  }
+
+  // Internal checkout — opens Cashfree right inside the dashboard, returns here.
+  async function unlockPro(siteUrl) {
+    setBusy("checkout");
+    try {
+      const res = await fetch("/api/order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: siteUrl, product: "report", returnTo: "dashboard" }) });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json) throw new Error((json && json.error) || "Could not start checkout.");
+      await loadCashfreeSDK();
+      const cashfree = window.Cashfree({ mode: json.env === "production" ? "production" : "sandbox" });
+      cashfree.checkout({ paymentSessionId: json.paymentSessionId, redirectTarget: "_self" });
+    } catch (e) { alert(e.message); setBusy(""); }
   }
   async function addSite() {
     if (!newUrl.trim()) return; setBusy("adding");
@@ -239,7 +294,7 @@ export default function Dashboard() {
               </ul>
               <div className="side-pro-price"><span className="spp-old">₹1,499</span><span className="spp-new">₹799</span></div>
               <div className="side-pro-timer">🔥 Launch price ends in {launchLeft}</div>
-              <a className="side-pro-btn" href={"/?audit=" + encodeURIComponent(activeSite.url) + "&checkout=1"}>Upgrade now</a>
+              <button className="side-pro-btn" onClick={() => unlockPro(activeSite.url)}>Upgrade now</button>
             </div>
           )}
           {activeSite && isPro && (
@@ -252,9 +307,19 @@ export default function Dashboard() {
         </aside>
 
         <main className="dsh-main">
-          {!activeSite && <div className="dsh-empty"><h3>Add your first store</h3><p>Enter a URL on the left. We'll scan it and break down exactly where it's leaking sales.</p></div>}
+          {/* In-dashboard scanning / unlocking loader */}
+          {(busy === "scanning" || busy === "unlocking") && (
+            <div className="dsh-scanning">
+              <div className="dsh-scan-spinner" />
+              <h3>{busy === "unlocking" ? "Confirming your payment…" : `Scanning ${(activeSite?.url || newUrl || "your store").replace(/^https?:\/\//, "").replace(/\/$/, "")}…`}</h3>
+              <p>{busy === "unlocking" ? "Verifying with the payment provider and unlocking Pro for your store." : "Running Lighthouse, parsing SEO, checking accessibility & conversion. About 30 seconds."}</p>
+              <div className="dsh-scan-bar"><span /></div>
+            </div>
+          )}
 
-          {activeSite && (
+          {busy !== "scanning" && busy !== "unlocking" && !activeSite && <div className="dsh-empty"><h3>Add your first store</h3><p>Enter a URL on the left. We'll scan it and break down exactly where it's leaking sales.</p></div>}
+
+          {busy !== "scanning" && busy !== "unlocking" && activeSite && (
             <>
               <div className="dsh-head">
                 <div>
@@ -317,7 +382,7 @@ export default function Dashboard() {
                       <button className="ov-w-act" onClick={() => runScan(activeSite.url, activeSite.id)} disabled={busy === "scanning"}>{busy === "scanning" ? "Scanning…" : "↻ Re-scan this store"}</button>
                       <button className="ov-w-act" onClick={() => setTab("Issues")}>⚠ Review {failed.length} open issues</button>
                       <button className="ov-w-act" onClick={() => setTab("How to fix")}>🛠 See how to fix them</button>
-                      {!isPro && <a className="ov-w-act primary" href={"/?audit=" + encodeURIComponent(activeSite.url) + "&checkout=1"}>🔓 Unlock Pro — ₹799</a>}
+                      {!isPro && <button className="ov-w-act primary" onClick={() => unlockPro(activeSite.url)}>🔓 Unlock Pro — ₹799</button>}
                     </div>
                     <div className="ov-w">
                       <div className="ov-w-h">💡 Insight</div>
@@ -351,7 +416,7 @@ export default function Dashboard() {
                           </div>
                         ))}
                       </div>
-                      <a className="cmp-pro-btn" href={"/?audit=" + encodeURIComponent(activeSite.url) + "&checkout=1"}>Unlock Pro for {activeSite.url.replace(/^https?:\/\//, "").replace(/\/$/, "")} — ₹799</a>
+                      <button className="cmp-pro-btn" onClick={() => unlockPro(activeSite.url)}>Unlock Pro for {activeSite.url.replace(/^https?:\/\//, "").replace(/\/$/, "")} — ₹799</button>
                       <div className="cmp-pro-note">🔥 Launch price ends in {launchLeft} · one-time payment, no subscription</div>
                     </div>
                   )}
@@ -386,7 +451,7 @@ export default function Dashboard() {
                         <p><b>What's wrong:</b> {c.detail}</p>
                         <p><b>Why it matters:</b> {c.why || "This affects how customers and search engines experience your store."}</p>
                         <p><b>How to fix:</b> {c.fix || "Open the relevant section in your store editor and apply the recommended change. The ₹799 fix-kit gives you copy-paste code for this."}</p>
-                        {!isPro && <a className="fix-pro" href={"/?audit=" + encodeURIComponent(activeSite.url) + "&checkout=1"}>Unlock copy-paste fix in the ₹799 kit →</a>}
+                        {!isPro && <button className="fix-pro" onClick={() => unlockPro(activeSite.url)}>Unlock copy-paste fix in the ₹799 kit →</button>}
                       </div>
                     </details>
                   ))}
@@ -409,7 +474,7 @@ export default function Dashboard() {
                         ))}
                       </div>
                     </>
-                  ) : <div className="pro-wall"><div><b>Score history is a Pro feature.</b><p>Unlock the ₹799 fix-kit to track your scores over time and prove your fixes are working.</p></div><a className="d-btn-y" href={"/?audit=" + encodeURIComponent(activeSite.url) + "&checkout=1"}>Unlock Pro — ₹799</a></div>}
+                  ) : <div className="pro-wall"><div><b>Score history is a Pro feature.</b><p>Unlock the ₹799 fix-kit to track your scores over time and prove your fixes are working.</p></div><button className="d-btn-y" onClick={() => unlockPro(activeSite.url)}>Unlock Pro — ₹799</button></div>}
                 </div>
               )}
 
@@ -442,7 +507,7 @@ export default function Dashboard() {
                   <div className="iss-head"><h3>Your saved fix-kit</h3><span>Reports & blueprints you've purchased</span></div>
                   {siteReports.length === 0 ? (
                     isPro ? <div className="dsh-empty sm"><p>Your purchased fix-kit will appear here.</p></div>
-                    : <div className="pro-wall"><div><b>No fix-kit yet.</b><p>Unlock the ₹799 kit to get written fixes, a growth blueprint, and copy-paste snippets saved to your account.</p></div><a className="d-btn-y" href={"/?audit=" + encodeURIComponent(activeSite.url) + "&checkout=1"}>Get the fix-kit — ₹799</a></div>
+                    : <div className="pro-wall"><div><b>No fix-kit yet.</b><p>Unlock the ₹799 kit to get written fixes, a growth blueprint, and copy-paste snippets saved to your account.</p></div><button className="d-btn-y" onClick={() => unlockPro(activeSite.url)}>Get the fix-kit — ₹799</button></div>
                   ) : siteReports.map((r) => (
                     <div className="kit-item" key={r.id}><div><b>Fix-kit</b><span>{new Date(r.created_at).toLocaleDateString("en-IN")}</span></div><a href={"/?audit=" + encodeURIComponent(activeSite.url)}>Open →</a></div>
                   ))}
@@ -458,7 +523,7 @@ export default function Dashboard() {
                       <select disabled={!isPro} defaultValue={activeSite.scan_freq || "off"} onChange={async (e) => { await api("saveSettings", { site_id: active, scan_freq: e.target.value }); await loadData(); }}><option value="off">Off</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select></div>
                     <div className="set-row"><div><b>Score-drop alerts</b><p>Get an email if your overall health falls.</p></div>
                       <label className="switch"><input type="checkbox" disabled={!isPro} defaultChecked={!!activeSite.alerts_on} onChange={async (e) => { await api("saveSettings", { site_id: active, alerts_on: e.target.checked }); await loadData(); }} /><span /></label></div>
-                    {!isPro && <a className="d-btn-y sm" href={"/?audit=" + encodeURIComponent(activeSite.url) + "&checkout=1"}>Unlock Pro to enable — ₹799</a>}
+                    {!isPro && <button className="d-btn-y sm" onClick={() => unlockPro(activeSite.url)}>Unlock Pro to enable — ₹799</button>}
                     {isPro && <p className="set-note">Scheduled scans run in the background. You'll see new entries appear under History.</p>}
                   </div>
                   <div className="set-card danger"><div className="set-row"><div><b>Remove site</b><p>Stop tracking this store and delete its scans.</p></div><button className="set-del" onClick={async () => { if (confirm("Remove this site?")) { await api("removeSite", { site_id: active }); setActive(null); await loadData(); } }}>Remove</button></div></div>
@@ -470,4 +535,15 @@ export default function Dashboard() {
       </div>
     </div>
   );
+}
+
+function loadCashfreeSDK() {
+  return new Promise((resolve, reject) => {
+    if (window.Cashfree) return resolve();
+    const s = document.createElement("script");
+    s.src = "https://sdk.cashfree.com/js/v3/cashfree.js";
+    s.onload = resolve;
+    s.onerror = () => reject(new Error("Could not load payment SDK."));
+    document.body.appendChild(s);
+  });
 }
