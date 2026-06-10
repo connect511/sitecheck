@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { THEME } from "./lib/theme";
+import AuthModal from "./AuthModal";
+import { getSupabase, supabaseConfigured } from "./lib/supabaseClient";
 
 const SCAN_MSGS = [
   "Resolving URL…", "Running Lighthouse audit…", "Parsing on-page SEO…",
@@ -207,7 +209,34 @@ export default function Home() {
   const [unlocking, setUnlocking] = useState(false);
   const [showScores, setShowScores] = useState(false);
   const [themeStatus, setThemeStatus] = useState("");
+  const [user, setUser] = useState(null);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [savingToAccount, setSavingToAccount] = useState(false);
   const scoresRef = useRef(null);
+
+  // Track auth so we know whether to gate the detailed results.
+  useEffect(() => {
+    if (!supabaseConfigured()) return;
+    const sb = getSupabase(); if (!sb) return;
+    sb.auth.getUser().then(({ data }) => setUser(data?.user || null));
+    const { data: sub } = sb.auth.onAuthStateChange((_e, s) => setUser(s?.user || null));
+    return () => sub?.subscription?.unsubscribe();
+  }, []);
+
+  // After login while results are showing, save the scanned site to the account.
+  const saveScanToAccount = useCallback(async (auditData) => {
+    try {
+      const sb = getSupabase(); if (!sb || !auditData) return;
+      const { data: sess } = await sb.auth.getSession();
+      const tok = sess?.session?.access_token; if (!tok) return;
+      setSavingToAccount(true);
+      const add = await fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + tok }, body: JSON.stringify({ action: "addSite", payload: { url: auditData.url } }) });
+      const aj = await add.json();
+      if (aj.site) {
+        await fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + tok }, body: JSON.stringify({ action: "saveScan", payload: { site_id: aj.site.id, scores: auditData.pagespeed?.scores, checks: auditData.seo?.checks } }) });
+      }
+    } catch { /* non-fatal */ } finally { setSavingToAccount(false); }
+  }, []);
 
   useEffect(() => {
     if (!loading) return;
@@ -266,7 +295,26 @@ export default function Home() {
       window.history.replaceState({}, "", "/");
       return;
     }
-    if (orderId && auditUrl) { setUrl(auditUrl); fetchPremium(orderId, auditUrl); window.history.replaceState({}, "", "/"); }
+    if (orderId && auditUrl) { setUrl(auditUrl); fetchPremium(orderId, auditUrl); window.history.replaceState({}, "", "/"); return; }
+
+    // Arriving from the dashboard's "Unlock Pro" button: ?audit=URL&checkout=1
+    // Auto-scan then open Cashfree checkout so the dashboard buttons actually work.
+    if (auditUrl && params.get("checkout") === "1") {
+      setUrl(auditUrl);
+      (async () => {
+        try {
+          setUnlocking(true); setError("");
+          // create the order directly (no need to wait for a full scan to charge)
+          const res = await fetch("/api/order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: auditUrl, product: "report" }) });
+          const json = await res.json();
+          if (!res.ok) throw new Error(json.error || "Could not start checkout.");
+          await loadCashfree();
+          const cashfree = window.Cashfree({ mode: json.env === "production" ? "production" : "sandbox" });
+          cashfree.checkout({ paymentSessionId: json.paymentSessionId, redirectTarget: "_self" });
+        } catch (e) { setError(e.message); setUnlocking(false); }
+      })();
+      window.history.replaceState({}, "", "/?audit=" + encodeURIComponent(auditUrl));
+    }
   }, [fetchPremium]);
 
   async function runAudit() {
@@ -297,7 +345,7 @@ export default function Home() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Could not start checkout.");
       await loadCashfree();
-      const cashfree = window.Cashfree({ mode: "sandbox" });
+      const cashfree = window.Cashfree({ mode: json.env === "production" ? "production" : "sandbox" });
       cashfree.checkout({ paymentSessionId: json.paymentSessionId, redirectTarget: "_self" });
     } catch (e) { setError(e.message); setUnlocking(false); }
   }
@@ -309,7 +357,7 @@ export default function Home() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Could not start checkout.");
       await loadCashfree();
-      const cashfree = window.Cashfree({ mode: "sandbox" });
+      const cashfree = window.Cashfree({ mode: json.env === "production" ? "production" : "sandbox" });
       cashfree.checkout({ paymentSessionId: json.paymentSessionId, redirectTarget: "_self" });
     } catch (e) { setError(e.message); }
   }
@@ -326,6 +374,7 @@ export default function Home() {
         <div className="logo">DIGI<span className="sq">STICK</span></div>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <a className="nav-link" href="/dashboard">Dashboard</a>
+          {!user && <button className="nav-link" style={{ background: "none", border: 0, cursor: "pointer", fontFamily: "var(--font)" }} onClick={() => setAuthOpen(true)}>Log in</button>}
           <a className="nav-cta" href="https://digistick.in" target="_blank" rel="noopener noreferrer">Need help implementing?</a>
         </div>
       </div>
@@ -365,7 +414,18 @@ export default function Home() {
               </>)}
               {data.pagespeedError && <p className="err">Performance scan unavailable: {data.pagespeedError}</p>}
 
-              {seo && (() => {
+              {/* SIGNUP GATE: show the scores above, but require an account to see the detailed breakdown. */}
+              {seo && !user && !premium && new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").get("preview") !== "1" && (
+                <div className="gate">
+                  <div className="gate-lock">🔒</div>
+                  <h3>Your full breakdown is ready</h3>
+                  <p>Create a free account to see every issue, exactly where you're lacking, and how to fix it — saved to your dashboard so you can track progress over time.</p>
+                  <button className="gate-btn" onClick={() => setAuthOpen(true)}>Create free account to see results</button>
+                  <div className="gate-sub">Free forever · no card needed · 20+ checks unlocked instantly</div>
+                </div>
+              )}
+
+              {seo && (user || premium || (new URLSearchParams(typeof window !== "undefined" ? window.location.search : "").get("preview") === "1")) && (() => {
                 const seoChecks = seo.checks.filter((c) => c.cat !== "cro");
                 const croChecks = seo.checks.filter((c) => c.cat === "cro");
                 const croFails = croChecks.filter((c) => !c.ok).length;
@@ -723,6 +783,21 @@ export default function Home() {
         <div className="f-small">SITECHECK · BY DIGISTICK · DATA FROM GOOGLE LIGHTHOUSE &amp; LIVE PAGE PARSE</div>
         <div className="f-legal"><a href="/privacy">Privacy Policy</a> · <a href="/terms">Terms of Service</a> · © {new Date().getFullYear()} Digistick Services Pvt Ltd</div>
       </footer>
+
+      {authOpen && (
+        <AuthModal
+          onClose={() => setAuthOpen(false)}
+          onAuthed={async (u) => {
+            setUser(u);
+            setAuthOpen(false);
+            // Save the just-scanned site to their account, then send them to the dashboard.
+            if (data) {
+              await saveScanToAccount(data);
+              window.location.href = "/dashboard";
+            }
+          }}
+        />
+      )}
     </>
   );
 }
