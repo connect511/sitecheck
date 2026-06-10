@@ -25,13 +25,15 @@ export async function POST(req) {
       );
     }
 
-    const { url, customer, product } = await req.json();
+    const { url, customer, product, returnTo } = await req.json();
     const kind = product === "theme" ? "theme" : "report";
     const amount = PRICES[kind];
     const orderId = "ds_" + kind + "_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
 
-    const ret = (process.env.APP_BASE_URL || "") +
-      "/?order_id={order_id}&product=" + kind + "&audit=" + encodeURIComponent(url || "");
+    const base = process.env.APP_BASE_URL || "";
+    const ret = returnTo === "dashboard"
+      ? base + "/dashboard?order_id={order_id}&unlock=" + encodeURIComponent(url || "")
+      : base + "/?order_id={order_id}&product=" + kind + "&audit=" + encodeURIComponent(url || "");
 
     const body = {
       order_id: orderId,
