@@ -1,4 +1,4 @@
-export const runtime = "nodejs";
+ export const runtime = "nodejs";
 export const maxDuration = 30;
 
 // Scan-aware AI chat. Only reachable from inside the paid report (client-gated),
@@ -35,9 +35,17 @@ Be concise (2–4 sentences), practical, and India-D2C aware. If asked to do som
     const res = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: { "Content-Type": "application/json", "x-api-key": key, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 400, system: sys, messages: safeMessages }),
+      body: JSON.stringify({ model: "claude-sonnet-4-6", max_tokens: 400, system: sys, messages: safeMessages }),
     });
-    if (!res.ok) return Response.json({ reply: "Sorry, I couldn't answer that just now. Please try again." });
+    if (!res.ok) {
+      let detail = "";
+      try { const err = await res.json(); detail = err?.error?.message || err?.error?.type || ""; } catch {}
+      const hint = res.status === 401 ? "API key looks invalid."
+        : res.status === 400 && /credit|balance|quota/i.test(detail) ? "Anthropic account has no credit — add billing credit in the console."
+        : res.status === 429 ? "Rate limited — try again in a moment."
+        : detail || `API error ${res.status}`;
+      return Response.json({ reply: `Chat is temporarily unavailable (${hint})` });
+    }
     const data = await res.json();
     const reply = (data.content || []).filter((b) => b.type === "text").map((b) => b.text).join("").trim();
     return Response.json({ reply: reply || "Could you rephrase that?" });
