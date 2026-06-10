@@ -62,7 +62,7 @@ export async function POST(req) {
       return Response.json({ error: data.message || "Could not start checkout. Try again." }, { status: 502 });
     }
 
-    return Response.json({ orderId, paymentSessionId: data.payment_session_id, amount, product: kind });
+    return Response.json({ orderId, paymentSessionId: data.payment_session_id, amount, product: kind, env: process.env.CASHFREE_ENV === "production" ? "production" : "sandbox" });
   } catch (e) {
     return Response.json({ error: "Checkout failed to start." }, { status: 500 });
   }
