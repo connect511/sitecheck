@@ -7,6 +7,13 @@ import AuthModal from "../AuthModal";
 const TABS = ["Overview", "Issues", "How to fix", "History", "Competitor", "Fix-kit", "Settings"];
 const NAV_ICON = { "Overview": "▦", "Issues": "⚠", "How to fix": "🛠", "History": "📈", "Competitor": "⚔", "Fix-kit": "🎁", "Settings": "⚙" };
 
+// Placeholder theme showcase — replace preview links + add real .zip assets before launch.
+const THEMES = [
+  { id: "velocity", name: "Velocity", tag: "Best for D2C", cls: "thm-v", preview: "https://themes.shopify.com/", desc: "High-converting all-rounder with urgency, trust badges and a sticky mobile cart.", features: ["Sticky add-to-cart", "Trust & COD badges", "Speed-optimized"] },
+  { id: "momentum", name: "Momentum", tag: "Best for fashion", cls: "thm-m", preview: "https://themes.shopify.com/", desc: "Visual-first layout built for apparel and lifestyle brands that sell on imagery.", features: ["Lookbook galleries", "Size-guide ready", "Reviews built in"] },
+  { id: "pulse", name: "Pulse", tag: "Best for single-product", cls: "thm-p", preview: "https://themes.shopify.com/", desc: "Long-form landing-page style theme made to convert cold traffic into buyers.", features: ["Exit-intent offer", "FAQ + social proof", "Email capture"] },
+];
+
 function color(v) {
   if (v == null) return "var(--d-muted)";
   if (v >= 90) return "#16a34a";
@@ -454,7 +461,36 @@ export default function Dashboard() {
               {/* HOW TO FIX */}
               {latest && tab === "How to fix" && (
                 <div className="fix">
-                  <div className="iss-head"><h3>How to fix each issue</h3><span>Step-by-step guidance for your failed checks</span></div>
+                  {/* THEME SHOWCASE — the real upsell */}
+                  <div className="thm">
+                    <div className="thm-head">
+                      <div>
+                        <h3>Skip the manual fixes — install a done-for-you theme</h3>
+                        <p>The same high-converting themes we build for clients. Every fix on your list is already baked in — urgency, trust badges, sticky cart, reviews, speed-optimized markup.</p>
+                      </div>
+                      <div className="thm-anchor"><span className="thm-old">₹30,000</span><span className="thm-new">₹3,999</span><span className="thm-save">87% off</span></div>
+                    </div>
+                    <div className="thm-grid">
+                      {THEMES.map((t) => (
+                        <div className="thm-card" key={t.id}>
+                          <div className={`thm-thumb ${t.cls}`}><span className="thm-thumb-tag">{t.tag}</span><span className="thm-thumb-name">{t.name}</span></div>
+                          <div className="thm-body">
+                            <div className="thm-name">{t.name}</div>
+                            <p className="thm-desc">{t.desc}</p>
+                            <ul className="thm-feats">{t.features.map((f) => <li key={f}>{f}</li>)}</ul>
+                            <div className="thm-price"><span className="thm-old">₹30,000</span><span className="thm-new">₹3,999</span></div>
+                            <div className="thm-actions">
+                              <a className="thm-preview" href={t.preview} target="_blank" rel="noopener noreferrer">👁 Live preview</a>
+                              <button className="thm-buy" onClick={() => alert("Checkout for themes is coming soon! For now, reply to your report email or contact connect@digistick.in to get this theme at ₹3,999.")}>Get this theme</button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="thm-note">💬 Theme checkout is launching soon. Want it now? <a href="https://digistick.in" target="_blank" rel="noopener noreferrer">Contact Digistick</a> and we'll set you up at the launch price.</div>
+                  </div>
+
+                  <div className="iss-head" style={{ marginTop: 28 }}><h3>Or fix each issue yourself</h3><span>Step-by-step guidance for your failed checks</span></div>
                   {failed.length === 0 && <div className="dsh-empty"><h3>Nothing to fix</h3><p>All checks passing.</p></div>}
                   {failed.map((c) => (
                     <details className="fix-item" key={c.label}>
