@@ -94,6 +94,33 @@ function computeLeak(data) {
   return { issues, est };
 }
 
+function copyText(e, text) {
+  navigator.clipboard.writeText(text);
+  const btn = e.currentTarget; const old = btn.innerText;
+  btn.innerText = "Copied ✓"; setTimeout(() => { btn.innerText = old; }, 1400);
+}
+
+function downloadFile(name, content) {
+  const blob = new Blob([content], { type: "text/plain" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = name; a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function CopyCard({ title, items }) {
+  return (
+    <div className="fix-card">
+      <div className="fix-card-h">{title}</div>
+      {(items || []).map((it, i) => (
+        <div className="fix-line" key={i}>
+          <span>{it}</span>
+          <button className="copy-mini" onClick={(e) => copyText(e, it)}>Copy</button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function LeakBanner({ leak }) {
   const [run, setRun] = useState(false);
   useEffect(() => { const t = setTimeout(() => setRun(true), 150); return () => clearTimeout(t); }, []);
@@ -151,10 +178,10 @@ export default function Home() {
     setShowScores(false);
   }, [data]);
 
-  const fetchPremium = useCallback(async (orderId, auditUrl) => {
+  const fetchPremium = useCallback(async (orderId, auditUrl, auditData) => {
     setUnlocking(true); setError("");
     try {
-      const res = await fetch("/api/premium", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId, url: auditUrl }) });
+      const res = await fetch("/api/premium", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId, url: auditUrl, audit: auditData }) });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Could not unlock report.");
       setPremium(json);
@@ -179,7 +206,12 @@ export default function Home() {
       setData(json);
       // TEMP preview: add ?preview=1 to the URL to view the unlocked premium report without paying.
       if (new URLSearchParams(window.location.search).get("preview") === "1") {
-        setPremium(makePreviewReport(json));
+        setUnlocking(true);
+        try {
+          const pr = await fetch("/api/premium", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ preview: true, url: json.url, audit: json }) });
+          const pj = await pr.json();
+          if (pr.ok) setPremium(pj);
+        } finally { setUnlocking(false); }
       }
     } catch (e) { setError(e.message); } finally { setLoading(false); }
   }
@@ -202,7 +234,7 @@ export default function Home() {
 
   return (
     <>
-      <div className="ticker">TRUSTED BY D2C BRANDS &amp; SHOPIFY STORES &nbsp;·&nbsp; <b>FREE INSTANT AUDIT</b> &nbsp;·&nbsp; FIX-KIT FROM <b>₹399</b> &nbsp;·&nbsp; BY DIGISTICK</div>
+      <div className="ticker">TRUSTED BY D2C BRANDS &amp; SHOPIFY STORES &nbsp;·&nbsp; <b>FREE INSTANT AUDIT</b> &nbsp;·&nbsp; FIX-KIT FROM <b>₹799</b> &nbsp;·&nbsp; BY DIGISTICK</div>
 
       <div className="nav">
         <div className="logo">DIGI<span className="sq">STICK</span></div>
@@ -221,7 +253,7 @@ export default function Home() {
         <div className="hero-stats">
           <div><div className="stat-num">30s</div><div className="stat-label">Instant scan</div></div>
           <div><div className="stat-num">20+</div><div className="stat-label">Checks run</div></div>
-          <div><div className="stat-num">₹399</div><div className="stat-label">Full fix-kit</div></div>
+          <div><div className="stat-num">₹799</div><div className="stat-label">Full fix-kit</div></div>
         </div>
       </section>
 
@@ -284,18 +316,83 @@ export default function Home() {
 
               {premium && (
                 <div id="premium-report">
-                  {premium.preview && <div className="preview-flag">👁 Preview mode — this is sample content so you can see the unlocked report. Real buyers get a version tailored to their scan.</div>}
-                  <div className="section-label">★ Your conversion roadmap</div>
-                  <p className="road-summary">{premium.roadmap.summary}</p>
-                  <div className="roadmap">
-                    {premium.roadmap.steps.map((s, i) => (
-                      <div className="road-step" key={i}>
-                        <span className="road-num">{i + 1}</span>
-                        <div><div className="road-title">{s.title} <span className={`impact ${s.impact?.toLowerCase()}`}>{s.impact}</span></div><div className="road-detail">{s.detail}</div></div>
+                  {premium.preview && <div className="preview-flag">👁 Preview mode — sample of the unlocked report. Real buyers get a version tailored to their scan.</div>}
+
+                  {/* Competitor benchmark */}
+                  {premium.benchmark && (
+                    <>
+                      <div className="section-label">★ How you stack up vs top stores</div>
+                      <div className="bench">
+                        <div className="bench-head">
+                          <div><div className="bench-you">{premium.benchmark.your}</div><div className="bench-cap">Your store</div></div>
+                          <div className="bench-gap">▼ {premium.benchmark.gap} points behind</div>
+                          <div><div className="bench-top">{premium.benchmark.top}</div><div className="bench-cap">Top stores</div></div>
+                        </div>
+                        {premium.benchmark.rows.map((r) => (
+                          <div className="bench-row" key={r.metric}>
+                            <span className="bench-metric">{r.metric}</span>
+                            <div className="bench-bars">
+                              <div className="bench-bar"><div className="bench-fill you" style={{ width: r.you + "%" }} /><span>{r.you}</span></div>
+                              <div className="bench-bar"><div className="bench-fill top" style={{ width: r.top + "%" }} /><span>{r.top}</span></div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    ))}
-                  </div>
-                  <div className="section-label">★ Shopify CRO snippets — copy &amp; paste</div>
+                    </>
+                  )}
+
+                  {/* Install-ready file */}
+                  {premium.installFile && (
+                    <>
+                      <div className="section-label">★ Install-ready Shopify file</div>
+                      <div className="install-card">
+                        <div>
+                          <div className="install-title">📦 ds-cro.liquid — your CRO Booster Pack</div>
+                          <div className="install-sub">One file with all your CRO sections. Upload once, render anywhere — no copy-pasting block by block.</div>
+                        </div>
+                        <button className="btn-yellow" style={{ width: "auto", padding: "13px 24px", whiteSpace: "nowrap" }}
+                          onClick={() => downloadFile("ds-cro.liquid", premium.installFile)}>⬇ Download file</button>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Personalized written fixes */}
+                  {premium.writtenFixes && (
+                    <>
+                      <div className="section-label">★ Your fixes, already written</div>
+                      <div className="fixes-grid">
+                        <CopyCard title="SEO title options" items={premium.writtenFixes.titles} />
+                        <CopyCard title="Meta description (paste-ready)" items={[premium.writtenFixes.metaDescription]} />
+                        <CopyCard title="Image alt text" items={premium.writtenFixes.altTexts} />
+                        <div className="fix-card">
+                          <div className="fix-card-h">FAQ section (handles objections)</div>
+                          {(premium.writtenFixes.faq || []).map((f, i) => (
+                            <div className="faq-pair" key={i}><div className="faq-pq">Q: {f.q}</div><div className="faq-pa">{f.a}</div></div>
+                          ))}
+                          <button className="copy-mini" onClick={(e) => copyText(e, (premium.writtenFixes.faq || []).map((f) => `Q: ${f.q}\nA: ${f.a}`).join("\n\n"))}>Copy all</button>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* 14-day action plan */}
+                  {premium.actionPlan?.days && (
+                    <>
+                      <div className="section-label">★ Your 14-day action plan</div>
+                      <div className="plan">
+                        {premium.actionPlan.days.map((d, i) => (
+                          <label className="plan-row" key={i}>
+                            <input type="checkbox" />
+                            <span className="plan-day">Day {d.day}</span>
+                            <span className="plan-task"><b>{d.task}</b><span className="plan-why">{d.why}</span></span>
+                          </label>
+                        ))}
+                      </div>
+                    </>
+                  )}
+
+                  {/* Snippets */}
+                  <div className="section-label">★ Copy-paste Shopify CRO snippets</div>
                   {premium.snippets.map((s) => <Snippet key={s.id} s={s} />)}
                   <button className="pdf-btn" onClick={() => window.print()}>Download / print full report (PDF)</button>
                 </div>
@@ -331,21 +428,22 @@ export default function Home() {
                       <h3 className="offer-h">Stop guessing.<br /><span className="y">Start converting.</span></h3>
 
                       <div className="value-stack">
-                        <div className="vs-row"><span>AI conversion roadmap (tailored)</span><span className="vs-p">₹1,500</span></div>
+                        <div className="vs-row"><span>Your fixes written for you (titles, meta, FAQ, alt text)</span><span className="vs-p">₹2,500</span></div>
+                        <div className="vs-row"><span>Install-ready Shopify file (upload once)</span><span className="vs-p">₹2,000</span></div>
                         <div className="vs-row"><span>7 copy-paste Shopify CRO sections</span><span className="vs-p">₹2,500</span></div>
-                        <div className="vs-row"><span>Urgency · COD trust · sticky cart · more</span><span className="vs-p">included</span></div>
-                        <div className="vs-row"><span>Downloadable branded PDF report</span><span className="vs-p">₹800</span></div>
-                        <div className="vs-row vs-total"><span>Total value</span><span className="vs-strike">₹4,800</span></div>
+                        <div className="vs-row"><span>14-day action plan + competitor benchmark</span><span className="vs-p">₹1,500</span></div>
+                        <div className="vs-row"><span>Downloadable branded report</span><span className="vs-p">₹800</span></div>
+                        <div className="vs-row vs-total"><span>Total value</span><span className="vs-strike">₹9,300</span></div>
                       </div>
 
                       <div className="price-block">
-                        <div className="price-now">₹399<span> today</span></div>
-                        <div className="price-save">You save 92%</div>
+                        <div className="price-now">₹799<span> today</span></div>
+                        <div className="price-save">You save 91%</div>
                       </div>
 
                       <div className="timer-row">⏳ Your audit &amp; this price are saved for <SessionTimer /> — after that you'll need to re-scan.</div>
 
-                      <button className="btn-yellow big" onClick={unlock} disabled={unlocking}>{unlocking ? "Starting checkout…" : "Unlock my fix-kit for ₹399 →"}</button>
+                      <button className="btn-yellow big" onClick={unlock} disabled={unlocking}>{unlocking ? "Starting checkout…" : "Unlock my fix-kit for ₹799 →"}</button>
 
                       <div className="guarantee">✓ Instant access · Secure Cashfree checkout · UPI, cards &amp; netbanking</div>
                       {error && <div className="err">{error}</div>}
@@ -388,7 +486,7 @@ export default function Home() {
           <div className="steps">
             <div className="step"><div className="step-num">1</div><h3>Paste your link</h3><p>Drop any store or website URL. No signup, no card. We scan it live in about 30 seconds.</p></div>
             <div className="step"><div className="step-num">2</div><h3>See what's leaking</h3><p>Get real scores and a checklist of issues — speed, SEO, broken trust signals, missing conversion elements.</p></div>
-            <div className="step"><div className="step-num">3</div><h3>Unlock the fix-kit</h3><p>For ₹399, get a prioritized roadmap and copy-paste Shopify code to fix it yourself — today.</p></div>
+            <div className="step"><div className="step-num">3</div><h3>Unlock the fix-kit</h3><p>For ₹799, get your fixes written for you, an install-ready file, a 14-day plan, and copy-paste CRO code.</p></div>
           </div>
         </div>
       </section>
@@ -398,7 +496,7 @@ export default function Home() {
           <span className="tag tag-dark">Loved by founders</span>
           <h2 className="sec-title">Real stores. <span className="blue">Real lifts.</span></h2>
           <div className="testi-grid">
-            <div className="testi"><div className="testi-stars">★★★★★</div><p className="testi-text">"Ran my Shopify store through it and pasted in the urgency + COD badges. Add-to-carts jumped within a week. Best ₹399 I've spent."</p><div className="testi-name">Rahul M.</div><div className="testi-role">D2C founder, skincare</div></div>
+            <div className="testi"><div className="testi-stars">★★★★★</div><p className="testi-text">"Ran my Shopify store through it and pasted in the urgency + COD badges. Add-to-carts jumped within a week. Best ₹799 I've spent."</p><div className="testi-name">Rahul M.</div><div className="testi-role">D2C founder, skincare</div></div>
             <div className="testi"><div className="testi-stars">★★★★★</div><p className="testi-text">"The roadmap was scary accurate. It found the exact reasons my product page wasn't converting and gave me the code to fix it."</p><div className="testi-name">Priya S.</div><div className="testi-role">Owner, home &amp; kitchen brand</div></div>
             <div className="testi"><div className="testi-stars">★★★★★</div><p className="testi-text">"I'm not technical. The copy-paste sections meant I actually shipped the fixes instead of adding them to a to-do list forever."</p><div className="testi-name">Aman K.</div><div className="testi-role">Shopify store owner</div></div>
           </div>
@@ -409,8 +507,8 @@ export default function Home() {
         <div className="sec-inner">
           <div className="center"><span className="tag tag-blue">Questions</span><h2 className="sec-title">Good to <span className="blue">know</span></h2></div>
           <div className="faq">
-            <div className="faq-item"><div className="faq-q">Is the scan really free?</div><div className="faq-a">Yes. The full audit — scores, SEO checks, issues — is free with no signup. You only pay ₹399 if you want the conversion roadmap and copy-paste fix-kit.</div></div>
-            <div className="faq-item"><div className="faq-q">What's actually in the ₹399 fix-kit?</div><div className="faq-a">A prioritized AI conversion roadmap specific to your site, plus ready-to-paste Shopify Liquid snippets — urgency bars, COD trust badges, sticky mobile cart, free-shipping bar, exit-intent offer and more — and a downloadable PDF report.</div></div>
+            <div className="faq-item"><div className="faq-q">Is the scan really free?</div><div className="faq-a">Yes. The full audit — scores, SEO checks, issues — is free with no signup. You only pay ₹799 if you want the done-for-you fixes, install-ready file, and full fix-kit.</div></div>
+            <div className="faq-item"><div className="faq-q">What's actually in the ₹799 fix-kit?</div><div className="faq-a">Your fixes written for you (SEO titles, meta description, FAQ, alt text), an install-ready Shopify file, 7 copy-paste CRO sections, a 14-day action plan, a competitor benchmark, and a downloadable report.</div></div>
             <div className="faq-item"><div className="faq-q">Will the code work on my Shopify theme?</div><div className="faq-a">The snippets are standard Liquid + HTML/CSS that drop into common theme files. Each tells you exactly where to paste it. Theme-agnostic and easy to remove.</div></div>
             <div className="faq-item"><div className="faq-q">Can Digistick just do it for me?</div><div className="faq-a">Absolutely — that's our core business. If you'd rather have experts build and optimize your store, book a free strategy call and we'll take it from here.</div></div>
           </div>
@@ -423,7 +521,7 @@ export default function Home() {
 
       {data && !premium && !unlocking && (
         <div className="sticky-unlock">
-          <div className="su-left"><span className="su-price">₹399</span><span className="su-txt">Unlock full fix-kit</span></div>
+          <div className="su-left"><span className="su-price">₹799</span><span className="su-txt">Unlock full fix-kit</span></div>
           <button className="su-btn" onClick={unlock} disabled={unlocking}>{unlocking ? "…" : "Unlock →"}</button>
         </div>
       )}
@@ -436,30 +534,6 @@ export default function Home() {
       </footer>
     </>
   );
-}
-
-function makePreviewReport(data) {
-  return {
-    preview: true,
-    url: data?.url,
-    roadmap: {
-      summary: "Your store is leaking conversions on trust, urgency, and clarity. Here's the prioritized order to fix it.",
-      steps: [
-        { title: "Add urgency / scarcity near Add-to-Cart", impact: "High", detail: "No urgency cues were found — add a low-stock or limited-time signal to push undecided buyers to act now." },
-        { title: "Show COD + trust badges at the buying decision", impact: "High", detail: "Indian shoppers abandon without COD/returns assurance. Add a trust row right under the buy button." },
-        { title: "Surface a free-shipping incentive", impact: "High", detail: "No free-shipping message detected — add a progress bar to lift average order value." },
-        { title: "Rewrite meta description (currently too long)", impact: "Medium", detail: "Trim to ~155 chars with a benefit + CTA to improve click-through from Google." },
-        { title: "Fix the 2 H1 tags down to one", impact: "Medium", detail: "Multiple H1s dilute SEO signals — keep a single, keyword-rich H1." },
-        { title: "Add alt text to the 11 missing images", impact: "Medium", detail: "Recovers organic image traffic and improves accessibility scoring." },
-      ],
-    },
-    snippets: [
-      { id: "urgency", title: "Low-stock urgency bar (product page)", why: "Scarcity is one of the highest-ROI CRO levers — it nudges hesitant buyers to act.", where: "Paste into sections/main-product.liquid just below the price.",
-        code: `{%- assign qty = product.selected_or_first_available_variant.inventory_quantity -%}\n{%- if qty > 0 and qty <= 15 -%}\n  <div class="ds-urgency">Hurry — only <strong>{{ qty }}</strong> left!</div>\n{%- endif -%}` },
-      { id: "cod", title: "COD + trust badges row", why: "Reduces checkout anxiety for Indian D2C shoppers — a top abandonment reason.", where: "Paste below the Add-to-Cart button.",
-        code: `<div class="ds-trust">\n  <span>💵 Cash on Delivery</span>\n  <span>🔁 7-day returns</span>\n  <span>🔒 Secure checkout</span>\n</div>` },
-    ],
-  };
 }
 
 function loadCashfree() {
