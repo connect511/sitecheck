@@ -431,6 +431,12 @@ export default function Home() {
                   {premium.writtenFixes && (
                     <>
                       <div className="section-label">★ Your fixes, already written</div>
+                      {premium.niche?.category && premium.niche.confidence !== "low" && (
+                        <div className="niche-tag">🎯 Detected store category: <b>{premium.niche.category}</b> — all copy below is written for this.</div>
+                      )}
+                      {premium.niche && (!premium.niche.category || premium.niche.confidence === "low") && (
+                        <div className="niche-tag warn">⚠ We couldn't confidently detect your exact products, so the copy below is kept generic. Tell the chat assistant what you sell for tailored versions.</div>
+                      )}
                       <div className="fixes-grid">
                         <CopyCard title="SEO title options" items={premium.writtenFixes.titles} />
                         <CopyCard title="Meta description (paste-ready)" items={[premium.writtenFixes.metaDescription]} />
