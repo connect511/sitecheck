@@ -70,9 +70,34 @@ export async function POST(req) {
       return Response.json({ ok: true });
     }
 
+    if (action === "dedupeSites") {
+      // Merge duplicate sites (same host) created before the find-or-create fix.
+      const { data: all } = await admin.from("sites").select("*").eq("user_id", user.id).order("created_at", { ascending: true });
+      const seen = {}; const removed = [];
+      for (const s of all || []) {
+        const key = s.url.replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/$/, "").toLowerCase();
+        if (seen[key]) {
+          // move this duplicate's scans/reports to the kept site, then delete the dup
+          const keepId = seen[key];
+          await admin.from("scans").update({ site_id: keepId }).eq("site_id", s.id).eq("user_id", user.id);
+          await admin.from("reports").update({ site_id: keepId }).eq("site_id", s.id).eq("user_id", user.id);
+          if (s.is_pro) await admin.from("sites").update({ is_pro: true }).eq("id", keepId);
+          await admin.from("sites").delete().eq("id", s.id).eq("user_id", user.id);
+          removed.push(s.id);
+        } else { seen[key] = s.id; }
+      }
+      return Response.json({ ok: true, removed: removed.length });
+    }
+
     if (action === "addSite") {
       const { url, label } = payload || {};
       if (!url) return Response.json({ error: "URL required." }, { status: 400 });
+      // Normalize so the same store isn't added twice (galloy.in == https://galloy.in/ == www.galloy.in)
+      const clean = url.replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/$/, "").toLowerCase();
+      // Look for an existing site for this user that matches the normalized host.
+      const { data: existing } = await admin.from("sites").select("*").eq("user_id", user.id);
+      const match = (existing || []).find((s) => s.url.replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/$/, "").toLowerCase() === clean);
+      if (match) return Response.json({ site: match, existing: true });
       const { data, error } = await admin.from("sites").insert({ user_id: user.id, url, label: label || null }).select().single();
       if (error) throw error;
       return Response.json({ site: data });
@@ -86,9 +111,10 @@ export async function POST(req) {
       const ok = await verifyCashfreePaid(orderId);
       if (!ok) return Response.json({ error: "Payment not verified." }, { status: 402 });
 
-      // find-or-create this site for the user
-      const clean = url.replace(/^https?:\/\//, "").replace(/\/$/, "");
-      let { data: site } = await admin.from("sites").select("*").eq("user_id", user.id).ilike("url", "%" + clean + "%").maybeSingle();
+      // find-or-create this site for the user (robust host match)
+      const clean = url.replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/$/, "").toLowerCase();
+      const { data: allSites } = await admin.from("sites").select("*").eq("user_id", user.id);
+      let site = (allSites || []).find((s) => s.url.replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/$/, "").toLowerCase() === clean);
       if (!site) {
         const ins = await admin.from("sites").insert({ user_id: user.id, url, is_pro: true }).select().single();
         site = ins.data;
