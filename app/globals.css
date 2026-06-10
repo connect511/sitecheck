@@ -808,3 +808,13 @@ body { background: var(--cream); color: var(--ink); font-family: var(--font); -w
 .ov-w-tip { font-size:13px; line-height:1.6; color:var(--d-muted,#6b6478); }
 .ov-w-meta { font-size:11px; color:var(--d-muted,#9a93a8); margin-top:12px; padding-top:12px; border-top:1px solid var(--d-line,#ece8f0); }
 @media (max-width:760px){ .ov-widgets { grid-template-columns:1fr; } }
+
+/* ===== v21: in-dashboard scanning / unlocking loader ===== */
+.dsh-scanning { display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:80px 24px; min-height:420px; }
+.dsh-scan-spinner { width:54px; height:54px; border:4px solid var(--d-line,#ece8f0); border-top-color:var(--d-blue,#2563EB); border-radius:50%; animation:dshspin .8s linear infinite; margin-bottom:22px; }
+@keyframes dshspin { to { transform:rotate(360deg); } }
+.dsh-scanning h3 { font-size:21px; font-weight:900; margin-bottom:8px; }
+.dsh-scanning p { color:var(--d-muted,#6b6478); font-size:14px; max-width:420px; line-height:1.6; }
+.dsh-scan-bar { width:260px; height:6px; background:var(--d-line,#ece8f0); border-radius:50px; overflow:hidden; margin-top:22px; }
+.dsh-scan-bar span { display:block; height:100%; width:40%; background:var(--d-blue,#2563EB); border-radius:50px; animation:dshbar 1.3s ease-in-out infinite; }
+@keyframes dshbar { 0%{ margin-left:-40%; } 100%{ margin-left:100%; } }
