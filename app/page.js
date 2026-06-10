@@ -320,11 +320,16 @@ export default function Home() {
 
   async function runAudit() {
     if (!url.trim()) return;
-    // GATE: if not logged in (and not preview), require signup BEFORE scanning.
     const isPreview = new URLSearchParams(window.location.search).get("preview") === "1";
+    // GATE: not logged in → require signup first.
     if (!user && supabaseConfigured() && !isPreview) {
       setPendingUrl(url);
       setAuthOpen(true);
+      return;
+    }
+    // Logged in → run the scan inside the dashboard, not on the homepage.
+    if (user && !isPreview) {
+      window.location.href = "/dashboard?scan=" + encodeURIComponent(url);
       return;
     }
     await doScan(url);
@@ -810,10 +815,10 @@ export default function Home() {
           onAuthed={async (u) => {
             setUser(u);
             setAuthOpen(false);
-            // If they were trying to scan, run it now → saves to account → dashboard.
+            // Go straight to the dashboard and let it run the scan internally.
             const target = pendingUrl || url;
-            if (target) { setPendingUrl(""); await doScan(target); }
-            else if (data) { await saveScanToAccount(data); window.location.href = "/dashboard"; }
+            if (target) { window.location.href = "/dashboard?scan=" + encodeURIComponent(target); }
+            else { window.location.href = "/dashboard"; }
           }}
         />
       )}
