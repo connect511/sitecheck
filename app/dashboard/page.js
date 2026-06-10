@@ -424,9 +424,9 @@ export default function Dashboard() {
                   <div className="iss-head"><h3>Settings & alerts</h3><span>Automated monitoring for this store</span>{!isPro && <span className="lock">PRO</span>}</div>
                   <div className={`set-card ${!isPro ? "locked" : ""}`}>
                     <div className="set-row"><div><b>Scheduled re-scans</b><p>Automatically re-audit this store and track changes.</p></div>
-                      <select disabled={!isPro} defaultValue="off"><option value="off">Off</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select></div>
-                    <div className="set-row"><div><b>Score-drop alerts</b><p>Get notified if your overall health falls.</p></div>
-                      <label className="switch"><input type="checkbox" disabled={!isPro} /><span /></label></div>
+                      <select disabled={!isPro} defaultValue={activeSite.scan_freq || "off"} onChange={async (e) => { await api("saveSettings", { site_id: active, scan_freq: e.target.value }); await loadData(); }}><option value="off">Off</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select></div>
+                    <div className="set-row"><div><b>Score-drop alerts</b><p>Get an email if your overall health falls.</p></div>
+                      <label className="switch"><input type="checkbox" disabled={!isPro} defaultChecked={!!activeSite.alerts_on} onChange={async (e) => { await api("saveSettings", { site_id: active, alerts_on: e.target.checked }); await loadData(); }} /><span /></label></div>
                     {!isPro && <a className="d-btn-y sm" href={"/?audit=" + encodeURIComponent(activeSite.url)}>Unlock Pro to enable — ₹799</a>}
                     {isPro && <p className="set-note">Scheduled scans run in the background. You'll see new entries appear under History.</p>}
                   </div>
