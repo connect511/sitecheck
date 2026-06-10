@@ -1,13 +1,14 @@
+import { THEME } from "../../lib/theme";
+
 export const runtime = "nodejs";
 
-// Creates a Cashfree order and returns the payment_session_id the frontend
-// SDK needs to open checkout. Amount is fixed server-side (₹399) so the client
-// can never tamper with the price.
-
-const PRICE = 799; // INR
+// Creates a Cashfree order. Amount + product are fixed server-side so the
+// client can never tamper with the price. Supports two products:
+//   "report" → ₹799 fix-kit
+//   "theme"  → the CRO theme upsell (price from theme config)
+const PRICES = { report: 799, theme: THEME.price };
 
 function cfBase() {
-  // Use sandbox while testing; switch to production by setting CASHFREE_ENV=production
   return process.env.CASHFREE_ENV === "production"
     ? "https://api.cashfree.com/pg"
     : "https://sandbox.cashfree.com/pg";
@@ -24,23 +25,25 @@ export async function POST(req) {
       );
     }
 
-    const { url, customer } = await req.json();
-    const orderId = "ds_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
+    const { url, customer, product } = await req.json();
+    const kind = product === "theme" ? "theme" : "report";
+    const amount = PRICES[kind];
+    const orderId = "ds_" + kind + "_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
+
+    const ret = (process.env.APP_BASE_URL || "") +
+      "/?order_id={order_id}&product=" + kind + "&audit=" + encodeURIComponent(url || "");
 
     const body = {
       order_id: orderId,
-      order_amount: PRICE,
+      order_amount: amount,
       order_currency: "INR",
       customer_details: {
         customer_id: "cust_" + Math.random().toString(36).slice(2, 10),
         customer_email: customer?.email || "guest@digistick.in",
         customer_phone: customer?.phone || "9999999999",
       },
-      order_meta: {
-        // Cashfree appends order_id automatically; return to same app
-        return_url: (process.env.APP_BASE_URL || "") + "/?order_id={order_id}&audit=" + encodeURIComponent(url || ""),
-      },
-      order_note: "SiteCheck premium report — " + (url || ""),
+      order_meta: { return_url: ret },
+      order_note: (kind === "theme" ? "Digistick CRO Theme — " : "SiteCheck fix-kit — ") + (url || ""),
     };
 
     const res = await fetch(cfBase() + "/orders", {
@@ -56,17 +59,10 @@ export async function POST(req) {
 
     const data = await res.json();
     if (!res.ok) {
-      return Response.json(
-        { error: data.message || "Could not start checkout. Try again." },
-        { status: 502 }
-      );
+      return Response.json({ error: data.message || "Could not start checkout. Try again." }, { status: 502 });
     }
 
-    return Response.json({
-      orderId,
-      paymentSessionId: data.payment_session_id,
-      amount: PRICE,
-    });
+    return Response.json({ orderId, paymentSessionId: data.payment_session_id, amount, product: kind });
   } catch (e) {
     return Response.json({ error: "Checkout failed to start." }, { status: 500 });
   }
