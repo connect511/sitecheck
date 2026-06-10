@@ -327,3 +327,50 @@ body { background: var(--cream); color: var(--ink); font-family: var(--font); -w
 .cro-lock-sub { color: var(--muted); font-size: 14px; margin: 8px 0 16px; max-width: 320px; }
 
 .preview-flag { background: #e8f0fe; border: 1px solid #c5d9fb; color: var(--blue); font-weight: 700; font-size: 13.5px; padding: 12px 16px; border-radius: 12px; margin: 8px 0 4px; text-align: center; }
+
+/* ===== v7: premium value-adds ===== */
+/* Competitor benchmark */
+.bench { background:#fff; border:1px solid var(--line); border-radius:18px; padding:22px; }
+.bench-head { display:flex; align-items:center; justify-content:space-between; gap:16px; padding-bottom:18px; border-bottom:1px solid var(--line); margin-bottom:16px; }
+.bench-you { font-size:40px; font-weight:900; color:var(--bad); line-height:1; }
+.bench-top { font-size:40px; font-weight:900; color:var(--good); line-height:1; }
+.bench-cap { font-size:11px; color:var(--muted); font-weight:700; text-transform:uppercase; letter-spacing:.05em; margin-top:4px; }
+.bench-gap { background:#ffeaea; color:var(--bad); font-weight:800; font-size:13px; padding:8px 14px; border-radius:50px; text-align:center; }
+.bench-row { display:flex; align-items:center; gap:14px; padding:8px 0; }
+.bench-metric { width:110px; font-size:13px; font-weight:700; flex:none; }
+.bench-bars { flex:1; display:grid; gap:6px; }
+.bench-bar { position:relative; background:#f0ede8; border-radius:50px; height:18px; }
+.bench-fill { height:100%; border-radius:50px; }
+.bench-fill.you { background:var(--bad); } .bench-fill.top { background:var(--good); opacity:.55; }
+.bench-bar span { position:absolute; right:8px; top:0; font-size:11px; font-weight:800; line-height:18px; color:#444; }
+
+/* Install file card */
+.install-card { display:flex; align-items:center; justify-content:space-between; gap:18px; background:var(--ink); color:#fff; border-radius:18px; padding:22px 26px; flex-wrap:wrap; }
+.install-title { font-weight:800; font-size:16px; }
+.install-sub { color:rgba(255,255,255,.7); font-size:13.5px; margin-top:6px; max-width:440px; }
+
+/* Written fixes */
+.fixes-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+.fix-card { background:#fff; border:1px solid var(--line); border-radius:16px; padding:18px; }
+.fix-card-h { font-weight:800; font-size:14px; margin-bottom:12px; color:var(--blue); }
+.fix-line { display:flex; align-items:flex-start; gap:10px; justify-content:space-between; padding:9px 0; border-bottom:1px solid var(--line); font-size:13.5px; }
+.fix-line:last-child { border-bottom:0; }
+.copy-mini { flex:none; background:#f0ede8; border:0; border-radius:50px; font-weight:700; font-size:11px; padding:6px 13px; cursor:pointer; color:var(--ink); }
+.copy-mini:hover { background:var(--yellow); }
+.faq-pair { padding:9px 0; border-bottom:1px solid var(--line); }
+.faq-pq { font-weight:700; font-size:13.5px; } .faq-pa { color:var(--muted); font-size:13px; margin-top:3px; }
+
+/* 14-day plan */
+.plan { background:#fff; border:1px solid var(--line); border-radius:18px; overflow:hidden; }
+.plan-row { display:flex; align-items:flex-start; gap:14px; padding:16px 20px; border-bottom:1px solid var(--line); cursor:pointer; }
+.plan-row:last-child { border-bottom:0; }
+.plan-row input { margin-top:3px; width:18px; height:18px; accent-color:var(--blue); flex:none; }
+.plan-day { flex:none; width:70px; font-weight:800; font-size:13px; color:var(--blue); }
+.plan-task { display:flex; flex-direction:column; font-size:14px; }
+.plan-why { color:var(--muted); font-size:12.5px; margin-top:3px; }
+
+@media (max-width:760px){
+  .fixes-grid { grid-template-columns:1fr; }
+  .bench-you,.bench-top { font-size:32px; }
+  .install-card { padding:20px; }
+}
