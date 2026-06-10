@@ -25,14 +25,43 @@ async function verifyPayment(orderId) {
 async function fetchSeo(url) {
   try {
     const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (compatible; DigistickSiteCheck/1.0)" } });
-    const $ = cheerio.load(await res.text());
-    const title = $("title").first().text().trim();
+    const html = await res.text();
+    const $ = cheerio.load(html);
+    const clean = (s) => (s || "").replace(/\s+/g, " ").trim();
+
+    const title = clean($("title").first().text());
     const metaDesc = $('meta[name="description"]').attr("content")?.trim() || "";
-    const h1 = $("h1").first().text().trim();
+    const metaKeywords = $('meta[name="keywords"]').attr("content")?.trim() || "";
+    const ogTitle = $('meta[property="og:title"]').attr("content")?.trim() || "";
+    const ogDesc = $('meta[property="og:description"]').attr("content")?.trim() || "";
+    const h1 = clean($("h1").first().text());
     const imgs = $("img");
     const missingAltSrcs = imgs.filter((_, el) => !$(el).attr("alt")).map((_, el) => $(el).attr("src")).get().slice(0, 8);
-    const hasOg = !!$('meta[property="og:title"]').attr("content") && !!$('meta[property="og:image"]').attr("content");
-    return { title, metaDesc, h1, imgCount: imgs.length, missingAlt: missingAltSrcs.length, missingAltSrcs, hasOg };
+    const hasOg = !!ogTitle && !!$('meta[property="og:image"]').attr("content");
+
+    // ---- Category signals (real page content, not just the title) ----
+    const headings = $("h1, h2, h3").map((_, el) => clean($(el).text())).get().filter(Boolean).slice(0, 25);
+    const navLinks = $("nav a, header a").map((_, el) => clean($(el).text())).get().filter((t) => t && t.length < 40).slice(0, 30);
+    // Shopify collection/product link slugs are strong signals
+    const slugs = $('a[href*="/collections/"], a[href*="/products/"]').map((_, el) => {
+      const href = $(el).attr("href") || "";
+      const m = href.match(/\/(collections|products)\/([a-z0-9-]+)/i);
+      return m ? m[2].replace(/-/g, " ") : "";
+    }).get().filter(Boolean).slice(0, 30);
+    // Image filenames often name the product
+    const imgNames = imgs.map((_, el) => {
+      const src = $(el).attr("src") || $(el).attr("data-src") || "";
+      const m = src.split("?")[0].match(/\/([^\/]+)\.(?:jpg|jpeg|png|webp|avif)$/i);
+      return m ? m[1].replace(/[-_]/g, " ").replace(/\d+/g, "").trim() : "";
+    }).get().filter((s) => s && s.length > 3).slice(0, 20);
+    // Visible body sample (first chunk of real text)
+    const bodySample = clean($("body").clone().find("script,style,noscript").remove().end().text()).slice(0, 1200);
+
+    const signals = {
+      headings, navLinks, slugs, imgNames, metaKeywords, ogTitle, ogDesc, bodySample,
+    };
+
+    return { title, metaDesc, h1, imgCount: imgs.length, missingAlt: missingAltSrcs.length, missingAltSrcs, hasOg, signals };
   } catch { return null; }
 }
 
@@ -52,31 +81,69 @@ async function callClaude(prompt, maxTokens = 1500) {
   } catch { return null; }
 }
 
-// 1) Personalized written fixes — the actual copy, ready to paste
-async function buildWrittenFixes(url, seo) {
+// STEP 1: Detect what the store actually sells from real page signals.
+async function detectNiche(url, seo) {
+  if (!process.env.ANTHROPIC_API_KEY || !seo?.signals) {
+    return { category: null, products: [], audience: null, confidence: "low" };
+  }
+  const s = seo.signals;
+  const prompt = `You are analyzing an e-commerce store to identify what it sells. Use ONLY the evidence below — do not guess from the brand name alone (brand names are often misleading).
+
+URL: ${url}
+Title: ${seo.title || "(none)"}
+Meta description: ${seo.metaDesc || "(none)"}
+Meta keywords: ${s.metaKeywords || "(none)"}
+OG title/desc: ${s.ogTitle} ${s.ogDesc}
+Headings: ${s.headings.join(" | ").slice(0, 600)}
+Nav links: ${s.navLinks.join(", ").slice(0, 400)}
+Collection/product slugs: ${s.slugs.join(", ").slice(0, 400)}
+Image filenames: ${s.imgNames.join(", ").slice(0, 300)}
+Body sample: ${s.bodySample.slice(0, 700)}
+
+Return ONLY valid JSON, no markdown:
+{"category":"the specific product category, e.g. 'home decor — wall art, clocks, tables'","products":["3-6 actual product types you found evidence for"],"audience":"likely target buyer","confidence":"high|medium|low"}
+Rules: Base every word on the evidence. If signals conflict or are too thin to tell, set category to null and confidence to "low" rather than guessing. NEVER infer a category purely from the brand name.`;
+  const out = await callClaude(prompt, 500);
+  return out || { category: null, products: [], audience: null, confidence: "low" };
+}
+
+// 1) Personalized written fixes — uses the DETECTED niche, never guesses.
+async function buildWrittenFixes(url, seo, niche) {
   const fallback = {
     titles: ["Your Brand | Primary Keyword + Benefit", "Buy [Product] Online — [Benefit] | Your Brand", "[Product] for [Audience] | Free Shipping | Your Brand"],
-    metaDescription: "Shop [product] crafted for [audience]. [Key benefit]. Free shipping, easy returns, COD available. Order today.",
+    metaDescription: "Shop quality products crafted for you. Great value, fast delivery, easy returns. Explore the collection and order today.",
     faq: [
       { q: "How long does delivery take?", a: "Orders are dispatched within 24–48 hours and typically arrive in 3–5 business days." },
       { q: "Do you offer Cash on Delivery?", a: "Yes, COD is available across most pin codes at checkout." },
       { q: "What is your return policy?", a: "Easy 7-day returns — if it's not right, send it back hassle-free." },
     ],
-    altTexts: ["Product front view on white background", "Close-up showing texture and detail", "Product in use by happy customer"],
+    altTexts: ["Product front view on white background", "Close-up showing texture and detail", "Product styled in a real setting"],
   };
   if (!process.env.ANTHROPIC_API_KEY || !seo) return fallback;
-  const prompt = `You are a senior D2C copywriter. Write ready-to-paste fixes for this store.
+
+  const known = niche?.category && niche.confidence !== "low";
+  const nicheBlock = known
+    ? `CONFIRMED store category: ${niche.category}
+Confirmed products: ${(niche.products || []).join(", ")}
+Target audience: ${niche.audience || "general shoppers"}
+Write everything specifically for THIS category and these products.`
+    : `The store's exact category could NOT be confirmed from the page. Do NOT invent or assume a product type. Write the copy GENERICALLY (use neutral words like "products", "pieces", "items") so nothing is factually wrong. Do not name a category you are unsure of.`;
+
+  const prompt = `You are a senior D2C copywriter writing ready-to-paste fixes for a store.
 Store URL: ${url}
 Current title: ${seo.title || "(none)"}
 Current meta description: ${seo.metaDesc || "(none)"}
-Main H1: ${seo.h1 || "(none)"}
-Images missing alt text: ${seo.missingAlt}
+Images needing alt text: ${seo.missingAlt}
 
-Infer the product/niche from the above. Return ONLY valid JSON, no markdown:
-{"titles":["3 SEO title options, each <=60 chars, specific to this store"],
+${nicheBlock}
+
+CRITICAL: Never reference a product type that isn't in the confirmed category above. If unsure, stay generic. Being wrong about what they sell is worse than being generic.
+
+Return ONLY valid JSON, no markdown:
+{"titles":["3 SEO title options, each <=60 chars"],
 "metaDescription":"one meta description <=155 chars with benefit + CTA",
-"faq":[{"q":"question","a":"answer"}] (4 niche-specific FAQs that handle real buying objections),
-"altTexts":["${Math.min(seo.missingAlt || 3, 6)} descriptive alt-text suggestions for product images"]}`;
+"faq":[{"q":"question","a":"answer"}] (4 FAQs handling real buying objections for this category),
+"altTexts":["${Math.min(seo.missingAlt || 3, 6)} descriptive alt-text suggestions"]}`;
   return (await callClaude(prompt, 1400)) || fallback;
 }
 
@@ -156,8 +223,13 @@ export async function POST(req) {
 
     const seo = await fetchSeo(url);
     const failedLabels = (audit?.seo?.checks || []).filter((c) => !c.ok).map((c) => c.label);
+
+    // STEP 1: detect the real category first (so copy can't drift to the wrong niche).
+    const niche = await detectNiche(url, seo);
+
+    // STEP 2: generate everything constrained to the detected niche.
     const [writtenFixes, actionPlan] = await Promise.all([
-      buildWrittenFixes(url, seo),
+      buildWrittenFixes(url, seo, niche),
       buildActionPlan(url, failedLabels),
     ]);
     const snippets = selectSnippets(audit?.seo || (seo ? { checks: [] } : null));
@@ -170,7 +242,7 @@ export async function POST(req) {
     };
 
     return Response.json({
-      paid: true, preview: !!preview, url,
+      paid: true, preview: !!preview, url, niche,
       writtenFixes, actionPlan, benchmark, snippets, installFile, roadmap,
       generatedAt: new Date().toISOString(),
     });
