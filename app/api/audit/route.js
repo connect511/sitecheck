@@ -98,7 +98,28 @@ async function runOnPageSeo(url) {
   const lowerHtml = html.toLowerCase();
 
   const checks = [];
-  const pass = (label, ok, detail, cat = "seo") => checks.push({ label, ok, detail, cat });
+  // META: weight (impact 1-3), why it matters, how to fix — drives the dashboard Issues & How-to-fix tabs
+  const META = {
+    "Title tag": [3, "The title is the #1 on-page SEO signal and the clickable headline in Google results.", "Set a unique 50–60 char title with your main keyword + brand in your theme's SEO settings or <title> tag."],
+    "Meta description": [2, "It's the sales pitch under your Google listing — a good one lifts click-through rate.", "Write a 120–155 char description with a benefit and a call to action in your page SEO settings."],
+    "Single H1": [2, "Search engines use the H1 to understand the page's main topic; multiple or missing H1s confuse ranking.", "Ensure exactly one H1 per page describing the main offering; demote extras to H2."],
+    "Image alt text": [2, "Alt text drives image SEO and accessibility; missing it loses Google Images traffic and fails WCAG.", "Add descriptive alt text to every product image in your media library or theme."],
+    "Canonical tag": [2, "Canonicals prevent duplicate-content penalties from URL variations.", "Add a self-referencing canonical link tag; most Shopify themes do this automatically — check it isn't stripped."],
+    "Mobile viewport": [3, "Without it, mobile users see a broken zoomed-out layout — and most D2C traffic is mobile.", "Add <meta name=viewport content='width=device-width, initial-scale=1'> to your theme head."],
+    "Open Graph (social)": [1, "OG tags control how your links look when shared on WhatsApp, Instagram, Facebook.", "Add og:title, og:description and og:image so shared links show a rich preview."],
+    "Structured data (schema)": [1, "Product schema can earn rich results (price, stars) in Google, boosting clicks.", "Add Product JSON-LD schema; many Shopify apps or theme settings enable this."],
+    "Content depth": [1, "Thin pages rank poorly; descriptive content helps SEO and buyer confidence.", "Add a richer product/collection description of 300+ words with keywords buyers search."],
+    "Urgency / scarcity": [3, "Urgency is one of the strongest triggers to stop buyers from leaving 'to think about it'.", "Add low-stock counters or limited-time messaging near the buy button (the ₹799 kit includes the code)."],
+    "Trust / COD signals": [3, "Indian D2C buyers need COD and return reassurance right at the buying decision.", "Add COD, secure-checkout and easy-returns badges near add-to-cart."],
+    "Reviews / social proof": [3, "Reviews are a top driver of purchase confidence; their absence kills conversion.", "Add a reviews widget and show ratings on product and collection pages."],
+    "Clear call-to-action": [3, "If the buy action isn't obvious, you lose sales you already paid to acquire.", "Use a single high-contrast 'Add to cart' / 'Buy now' button above the fold."],
+    "Offer / incentive": [2, "A visible incentive nudges undecided visitors over the line.", "Surface a first-order discount or bundle offer prominently."],
+    "Free-shipping signal": [2, "Free shipping is a proven lever for conversion and average order value.", "Add a free-shipping bar (e.g. 'Free shipping over ₹999') sitewide."],
+  };
+  const pass = (label, ok, detail, cat = "seo") => {
+    const m = META[label] || [1];
+    checks.push({ label, ok, detail, cat, weight: m[0], why: m[1], fix: m[2] });
+  };
 
   // ---- SEO & technical ----
   pass("Title tag", !!title && title.length >= 10 && title.length <= 65,
