@@ -228,6 +228,22 @@ export default function Home() {
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || "Could not unlock report.");
       setPremium(json);
+      // If the buyer is logged in, save this report to their account and unlock Pro for the site.
+      try {
+        const { getSupabase } = await import("./lib/supabaseClient");
+        const sb = getSupabase();
+        if (sb) {
+          const { data } = await sb.auth.getSession();
+          const tok = data?.session?.access_token;
+          if (tok) {
+            await fetch("/api/dashboard", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Authorization: "Bearer " + tok },
+              body: JSON.stringify({ action: "unlockPro", payload: { url: auditUrl, report: json, orderId } }),
+            });
+          }
+        }
+      } catch { /* not logged in or supabase off — report still shows on page */ }
     } catch (e) { setError(e.message); } finally { setUnlocking(false); }
   }, []);
 
@@ -705,6 +721,7 @@ export default function Home() {
         <div className="f-tag">Digital marketing &amp; creative agency · Noida</div>
         <a className="btn-yellow" href="https://digistick.in" target="_blank" rel="noopener noreferrer" style={{ width: "auto", display: "inline-block", padding: "13px 32px" }}>Book a free strategy call</a>
         <div className="f-small">SITECHECK · BY DIGISTICK · DATA FROM GOOGLE LIGHTHOUSE &amp; LIVE PAGE PARSE</div>
+        <div className="f-legal"><a href="/privacy">Privacy Policy</a> · <a href="/terms">Terms of Service</a> · © {new Date().getFullYear()} Digistick Services Pvt Ltd</div>
       </footer>
     </>
   );
