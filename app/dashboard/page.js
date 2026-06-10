@@ -334,38 +334,50 @@ export default function Dashboard() {
               {/* OVERVIEW */}
               {latest && tab === "Overview" && (
                 <div className="ov">
-                  <div className="ov-greet">
-                    <div className="ov-greet-txt">
+                  {/* Colorful greeting banner */}
+                  <div className="ovx-greet">
+                    <div className="ovx-greet-glow" />
+                    <div className="ovx-greet-l">
                       <h2>Welcome back{user.email ? ", " + user.email.split("@")[0] : ""}! 👋</h2>
-                      <p>{new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })}</p>
+                      <p>{new Date().toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })} · {(activeSite.url || "").replace(/^https?:\/\//, "").replace(/\/$/, "")}</p>
                     </div>
-                    <div className={`ov-greet-badge ${latest.overall >= 70 ? "good" : latest.overall >= 50 ? "ok" : "low"}`}>
-                      {latest.overall >= 85 ? "🎉 Your store is in great shape!" : latest.overall >= 70 ? "👍 Looking good — a few fixes left." : latest.overall >= 50 ? "⚙ Solid base — clear wins ahead." : "⚡ Big wins available — let's fix the leaks."}
-                    </div>
-                  </div>
-                  <div className="ov-hero">
-                    <div className="ov-gauge">
-                      <Gauge value={latest.overall} />
-                      <div className="ov-gauge-meta">
-                        <div className="ov-gl">Overall health</div>
-                        {delta != null && <div className={`ov-delta ${delta >= 0 ? "up" : "down"}`}>{delta >= 0 ? "▲" : "▼"} {Math.abs(delta)} vs last scan</div>}
+                    <div className="ovx-greet-r">
+                      <div className="ovx-health">
+                        <Gauge value={latest.overall} size={92} />
+                      </div>
+                      <div className="ovx-health-meta">
+                        <span className="ovx-health-lbl">Overall health</span>
+                        {delta != null && <span className={`ovx-delta ${delta >= 0 ? "up" : "down"}`}>{delta >= 0 ? "▲" : "▼"} {Math.abs(delta)} vs last scan</span>}
                       </div>
                     </div>
-                    <div className="ov-stats">
-                      {[["Performance", "performance"], ["SEO", "seo"], ["Accessibility", "accessibility"], ["Best practices", "bestPractices"]].map(([lbl, key]) => (
-                        <div className="ov-stat" key={key}>
-                          <div className="ov-stat-v" style={{ color: color(latest.scores?.[key]) }}>{latest.scores?.[key] ?? "—"}</div>
-                          <div className="ov-stat-l">{lbl}</div>
-                          <div className="ov-stat-bar"><span style={{ width: (latest.scores?.[key] || 0) + "%", background: color(latest.scores?.[key]) }} /></div>
-                        </div>
-                      ))}
-                    </div>
                   </div>
-                  <div className="ov-row">
-                    <div className="ov-card good"><div className="ov-card-n">{passed.length}</div><div className="ov-card-l">Checks passing</div></div>
-                    <div className="ov-card bad"><div className="ov-card-n">{failed.length}</div><div className="ov-card-l">Issues to fix</div></div>
-                    <div className="ov-card"><div className="ov-card-n">{checks.length}</div><div className="ov-card-l">Total checks run</div></div>
-                    <div className="ov-card"><div className="ov-card-n">{isPro ? "Pro" : "Free"}</div><div className="ov-card-l">Plan</div></div>
+
+                  {/* Colorful score tiles (Learnify-style cards) */}
+                  <div className="ovx-tiles">
+                    {[
+                      ["Performance", "performance", "tile-yellow", "⚡"],
+                      ["SEO", "seo", "tile-purple", "🔍"],
+                      ["Accessibility", "accessibility", "tile-blue", "♿"],
+                      ["Best practices", "bestPractices", "tile-green", "✅"],
+                    ].map(([lbl, key, cls, ic]) => {
+                      const v = latest.scores?.[key];
+                      return (
+                        <div className={`ovx-tile ${cls}`} key={key}>
+                          <div className="ovx-tile-top"><span className="ovx-tile-ic">{ic}</span><span className="ovx-tile-badge">{band(v)}</span></div>
+                          <div className="ovx-tile-v">{v ?? "—"}<span>/100</span></div>
+                          <div className="ovx-tile-l">{lbl}</div>
+                          <div className="ovx-tile-bar"><span style={{ width: (v || 0) + "%" }} /></div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Stat strip */}
+                  <div className="ovx-stats">
+                    <div className="ovx-stat"><div className="ovx-stat-n good">{passed.length}</div><div className="ovx-stat-l">Checks passing</div></div>
+                    <div className="ovx-stat"><div className="ovx-stat-n bad">{failed.length}</div><div className="ovx-stat-l">Issues to fix</div></div>
+                    <div className="ovx-stat"><div className="ovx-stat-n">{checks.length}</div><div className="ovx-stat-l">Checks run</div></div>
+                    <div className="ovx-stat"><div className={`ovx-stat-n ${isPro ? "pro" : ""}`}>{isPro ? "Pro" : "Free"}</div><div className="ovx-stat-l">Your plan</div></div>
                   </div>
                   {priority.length > 0 && (
                     <div className="ov-next">
