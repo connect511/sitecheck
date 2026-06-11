@@ -508,9 +508,9 @@ export default function Home() {
       <div className="nav">
         <div className="logo">DIGI<span className="sq">STICK</span></div>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <a className="nav-link" href="/dashboard">Dashboard</a>
           {!user && <button className="nav-link" style={{ background: "none", border: 0, cursor: "pointer", fontFamily: "var(--font)" }} onClick={() => setAuthOpen(true)}>Log in</button>}
-          <a className="nav-cta" href="https://digistick.in" target="_blank" rel="noopener noreferrer">Need help implementing?</a>
+          {!user && <button className="nav-cta" style={{ border: 0, cursor: "pointer", fontFamily: "var(--font)" }} onClick={() => setAuthOpen(true)}>Sign up free</button>}
+          {user && <a className="nav-cta" href="/dashboard">My dashboard</a>}
         </div>
       </div>
 

@@ -31,7 +31,9 @@ export async function POST(req) {
     const orderId = "ds_" + kind + "_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
 
     const base = process.env.APP_BASE_URL || "";
-    const ret = returnTo === "dashboard"
+    const ret = returnTo === "dashboard-theme"
+      ? base + "/dashboard?theme_order={order_id}"
+      : returnTo === "dashboard"
       ? base + "/dashboard?order_id={order_id}&unlock=" + encodeURIComponent(url || "")
       : base + "/?order_id={order_id}&product=" + kind + "&audit=" + encodeURIComponent(url || "");
 

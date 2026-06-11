@@ -2,7 +2,7 @@
    and the server API — prices are always validated server-side from this file,
    so the client can never tamper with amounts. Advance = 10% of member price. */
 
-export const ADVANCE_PCT = 0.10;
+export const ADVANCE_PCT = 0.30;
 
 export const SERVICES_CATALOG = [
   { key: "speed", ic: "zap", cls: "sv-blue", name: "Store Speed Optimization", start: 2999, unit: "one-time",
@@ -75,6 +75,24 @@ export const SERVICES_CATALOG = [
     members: [
       { id: "wa-1", name: "Yash Thakur", role: "Automation Specialist", rating: 4.8, jobs: 91, days: "2 days", price: 1999 },
       { id: "wa-2", name: "Aarti Mishra", role: "WhatsApp Flows Expert", rating: 4.7, jobs: 58, days: "3 days", price: 2499 },
+    ] },
+  { key: "ugc_video", ic: "image", cls: "sv-amber", name: "UGC Video Pack", start: 4999, unit: "per pack",
+    desc: "5 authentic creator-style UGC videos of your product — hooks, voiceover, captions, ad-ready.",
+    members: [
+      { id: "ugc-1", name: "Simran Kaur", role: "UGC Creator & Editor", rating: 4.9, jobs: 112, days: "7 days", price: 5999 },
+      { id: "ugc-2", name: "Aryan Khurana", role: "UGC Content Producer", rating: 4.8, jobs: 87, days: "8 days", price: 4999 },
+    ] },
+  { key: "lifestyle_shoot", ic: "eye", cls: "sv-green", name: "Lifestyle & Model Shoot", start: 5999, unit: "per pack",
+    desc: "On-model and lifestyle photography at Digistick Studio — 20 edited shots that sell the feeling.",
+    members: [
+      { id: "ls-1", name: "Devansh Choudhary", role: "Lead Photographer", rating: 4.9, jobs: 86, days: "6 days", price: 6999 },
+      { id: "ls-2", name: "Mitali Joshi", role: "Fashion Photographer", rating: 4.8, jobs: 64, days: "7 days", price: 5999 },
+    ] },
+  { key: "ai_automation", ic: "bot", cls: "sv-purple", name: "AI Automation Setup", start: 4999, unit: "setup",
+    desc: "AI chatbots, auto-replies, lead capture and workflow automations wired into your store and WhatsApp.",
+    members: [
+      { id: "ai-1", name: "Kabir Anand", role: "AI Automation Engineer", rating: 4.9, jobs: 53, days: "5 days", price: 5999 },
+      { id: "ai-2", name: "Nandini Rathi", role: "Automation Specialist", rating: 4.8, jobs: 41, days: "5 days", price: 4999 },
     ] },
   { key: "growth", ic: "trophy", cls: "sv-dark", name: "Complete Growth Package", start: 14999, unit: "per month",
     desc: "Speed + SEO + CRO + Ads + content under one roof. Your store, run like our best clients.",

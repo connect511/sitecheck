@@ -271,6 +271,8 @@ export default function Dashboard() {
   const [bookPhone, setBookPhone] = useState("");
   const [reply, setReply] = useState("");
   const [dailyBudget, setDailyBudget] = useState(500);
+  const [bookedOk, setBookedOk] = useState(null);   // confirmed booking for green banner
+  const [themeOrder, setThemeOrder] = useState(null); // paid theme order id
   const configured = supabaseConfigured();
 
   useEffect(() => {
@@ -293,6 +295,7 @@ export default function Dashboard() {
   useEffect(() => {
     if (!active) return;
     try { setDone(JSON.parse(window.localStorage.getItem("ds_plan_" + active) || "{}")); } catch { setDone({}); }
+    try { setThemeOrder(window.localStorage.getItem("ds_theme_order_" + active) || null); } catch { setThemeOrder(null); }
   }, [active]);
 
   // Pro upgrade popup — fires once per day, 20s after a free-plan store loads.
@@ -383,6 +386,16 @@ export default function Dashboard() {
       })();
       return;
     }
+    const themeOrderId = params.get("theme_order");
+    if (themeOrderId && !scanQueuedRef.current) {
+      scanQueuedRef.current = true;
+      window.history.replaceState({}, "", "/dashboard");
+      if (active) { try { window.localStorage.setItem("ds_theme_order_" + active, themeOrderId); } catch {} }
+      setThemeOrder(themeOrderId);
+      setTab("Theme Audit");
+      return;
+    }
+
     const bookingId = params.get("booking");
     if (bookingId && orderId && !scanQueuedRef.current) {
       scanQueuedRef.current = true;
@@ -391,7 +404,7 @@ export default function Dashboard() {
         setBusy("unlocking");
         try {
           const r = await api("confirmBooking", { booking_id: bookingId, orderId });
-          if (r.ok) { await loadBookings(); setTab("Services"); alert("Booking confirmed! Your advance is paid — our team will reach out within 24 hours."); }
+          if (r.ok) { await loadBookings(); setTab("Services"); setBookedOk(r.booking); }
           else alert(r.error || "We couldn't verify that payment. If money was deducted, contact support.");
         } finally { setBusy(""); }
       })();
@@ -467,6 +480,17 @@ export default function Dashboard() {
     a.download = "ds-cro.liquid";
     a.click();
     URL.revokeObjectURL(a.href);
+  }
+  async function buyThemeNow() {
+    setBusy("checkout");
+    try {
+      const res = await fetch("/api/order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: activeSite.url, product: "theme", returnTo: "dashboard-theme" }) });
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json) throw new Error((json && json.error) || "Could not start checkout.");
+      await loadCashfreeSDK();
+      const cashfree = window.Cashfree({ mode: json.env === "production" ? "production" : "sandbox" });
+      cashfree.checkout({ paymentSessionId: json.paymentSessionId, redirectTarget: "_self" });
+    } catch (e) { alert(e.message); setBusy(""); }
   }
   async function payAdvance() {
     if (!bookSvc || !bookMember) return;
@@ -761,6 +785,13 @@ export default function Dashboard() {
             {latest && tab === "Theme Audit" && !isPro && <ProGate title="Theme audit is a Pro feature" desc="See how much your current theme is costing you, every conversion blocker inside it, and how it compares to conversion-ready Digistick themes." items={["Theme conversion score", "Blockers with revenue impact", "Digistick theme comparison", "Upgrade recommendations"]} timer={launchLeft} onUnlock={() => unlockPro(activeSite.url)} />}
             {latest && tab === "Theme Audit" && isPro && (
               <>
+                {themeOrder && (
+                  <div className="g-success">
+                    <span className="g-success-ic"><I n="check" size={16} /></span>
+                    <div><b>Theme unlocked — payment verified</b><p>Your conversion-ready theme is yours. Download it and upload in Shopify → Online Store → Themes → Add theme.</p></div>
+                    <a className="g-btn-success" href={"/api/theme-download?order_id=" + encodeURIComponent(themeOrder)} target="_blank" rel="noopener noreferrer"><I n="download" size={14} /> Download theme</a>
+                  </div>
+                )}
                 <div className="g-sec-h"><h2>Theme audit</h2><p>How much your current theme is helping — or costing — your conversions.</p></div>
                 <div className="g-2col">
                   <div className="g-card g-ads-ready">
@@ -788,7 +819,7 @@ export default function Dashboard() {
                         <ul className="g-list sm">{t.features.map((f) => <li key={f}>{f}</li>)}</ul>
                         <div className="g-app-actions">
                           <a className="g-btn-ghost dark" href={t.preview} target="_blank" rel="noopener noreferrer">Preview</a>
-                          <button className="g-btn-primary sm" onClick={() => alert("Theme checkout is launching soon! Contact connect@digistick.in to get this theme at Rs 3,999 with setup.")}>Request setup</button>
+                          {themeOrder ? <a className="g-btn-success sm-link" href={"/api/theme-download?order_id=" + encodeURIComponent(themeOrder)} target="_blank" rel="noopener noreferrer">Download</a> : <button className="g-btn-primary sm" onClick={buyThemeNow} disabled={busy === "checkout"}>{busy === "checkout" ? "Opening…" : "Buy ₹3,999"}</button>}
                         </div>
                       </div>
                     </div>
@@ -907,8 +938,15 @@ export default function Dashboard() {
             {/* ============ SERVICES ============ */}
             {tab === "Services" && (
               <>
-                <div className="g-sec-h"><h2>Digistick services</h2><p>Done-for-you growth. Pick a specialist, pay a 10% advance, and your booking lands with our team instantly.</p></div>
+                <div className="g-sec-h"><h2>Digistick services</h2><p>Done-for-you growth. Pick a specialist, pay a 30% advance, and your booking lands with our team instantly.</p></div>
 
+                {bookedOk && (
+                  <div className="g-success">
+                    <span className="g-success-ic"><I n="check" size={16} /></span>
+                    <div><b>Booking confirmed — advance paid</b><p>{bookedOk.service_name} with {bookedOk.member_name} is locked in. Our team will call you within 24 hours for kickoff.</p></div>
+                    <button className="g-success-x" onClick={() => setBookedOk(null)}><I n="x" size={13} /></button>
+                  </div>
+                )}
                 {bookings.length > 0 && (
                   <div className="g-card" style={{ marginBottom: 18 }}>
                     <div className="g-card-h"><h3><I n="calendar" size={15} /> My bookings</h3></div>
@@ -930,7 +968,7 @@ export default function Dashboard() {
                       {recommendedService === s2.key && <span className="g-sv-rec">Recommended for you</span>}
                       <span className="g-sv-ic"><I n={s2.ic} size={17} /></span>
                       <b>{s2.name}</b><p>{s2.desc}</p>
-                      <div className="g-sv-foot"><span>Starts at {inr(s2.start)}<i className="g-sv-unit">{s2.unit}</i></span><button className="g-sv-book" onClick={() => { setBookSvc(s2); setBookMember(null); }}>Book <I n="arrowRight" size={12} /></button></div>
+                      <div className="g-sv-foot"><span>Starts from {inr(s2.start)}</span><button className="g-sv-book" onClick={() => { setBookSvc(s2); setBookMember(null); }}>Book <I n="arrowRight" size={12} /></button></div>
                     </div>
                   ))}
                 </div>
@@ -1069,7 +1107,7 @@ export default function Dashboard() {
         <div className="pp-overlay" onClick={() => setBookSvc(null)}>
           <div className="pp-modal bk-modal" onClick={(e) => e.stopPropagation()}>
             <div className="bk-head">
-              <div><h3>{bookSvc.name}</h3><p className="g-dim">Choose your specialist · pay just <b>10% advance</b> to book — balance after kickoff call.</p></div>
+              <div><h3>{bookSvc.name}</h3><p className="g-dim">Choose your specialist · pay just <b>30% advance</b> to book — balance after kickoff call.</p></div>
               <button className="ai-x dark" onClick={() => setBookSvc(null)}><I n="x" size={15} /></button>
             </div>
             <div className="bk-members">
@@ -1081,13 +1119,13 @@ export default function Dashboard() {
                     <span>{m.role}</span>
                     <div className="bk-m-meta"><span className="bk-star"><I n="star" size={11} /> {m.rating}</span><span>{m.jobs} projects</span><span><I n="clock" size={11} /> {m.days}</span></div>
                   </div>
-                  <div className="bk-m-price"><b>{inr(m.price)}</b><i>{bookSvc.unit}</i></div>
+                  <div className="bk-m-price"><b>{inr(m.price)}</b></div>
                 </button>
               ))}
             </div>
             <div className="bk-phone"><I n="phone" size={15} /><input type="tel" value={bookPhone} onChange={(e) => setBookPhone(e.target.value)} placeholder="Your phone number (for the kickoff call)" /></div>
             <button className="g-btn-danger bk-cta" onClick={payAdvance} disabled={!bookMember || busy === "booking"}>
-              {busy === "booking" ? "Starting checkout…" : bookMember ? `Pay ${inr(Math.round(bookMember.price * 0.1))} advance & book ${bookMember.name.split(" ")[0]}` : "Select a specialist to continue"}
+              {busy === "booking" ? "Starting checkout…" : bookMember ? `Pay ${inr(Math.round(bookMember.price * 0.3))} advance & book ${bookMember.name.split(" ")[0]}` : "Select a specialist to continue"}
             </button>
             <div className="bk-note"><I n="shield" size={12} /> Secure Cashfree checkout · advance is fully adjustable against the final invoice · booking lands with our team instantly</div>
           </div>
