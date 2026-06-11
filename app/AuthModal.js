@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { getSupabase } from "./lib/supabaseClient";
+import I from "./lib/icons";
 
 export default function AuthModal({ onClose, onAuthed }) {
   const [mode, setMode] = useState("login"); // login | signup
@@ -20,7 +21,6 @@ export default function AuthModal({ onClose, onAuthed }) {
       if (mode === "signup") {
         const { data, error } = await sb.auth.signUp({ email, password });
         if (error) throw error;
-        // If email confirmation is off, session exists immediately → log them in.
         if (data.session) { onAuthed?.(data.user); onClose?.(); return; }
         setMsg("Account created! Check your email to confirm, then log in.");
         setMode("login");
@@ -36,59 +36,55 @@ export default function AuthModal({ onClose, onAuthed }) {
   }
 
   const isLogin = mode === "login";
+  const PERKS = [
+    ["chart", "Track your store's health over time"],
+    ["target", "See exactly what's costing you sales"],
+    ["wrench", "Get copy-paste fixes in your dashboard"],
+    ["alert", "Alerts when your score drops"],
+  ];
 
   return (
-    <div className="auth-overlay" onClick={onClose}>
-      <div className="auth-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="auth-x" onClick={onClose} aria-label="Close">×</button>
+    <div className="au2-overlay" onClick={onClose}>
+      <div className="au2-modal" onClick={(e) => e.stopPropagation()}>
+        <button className="au2-x" onClick={onClose} aria-label="Close"><I n="x" size={15} /></button>
 
-        {/* Left brand panel */}
-        <div className="auth-side">
-          <div className="auth-side-glow" />
-          <div className="auth-logo">DIGI<span>STICK</span></div>
-          <div className="auth-side-body">
-            <h2>{isLogin ? "Welcome back." : "Find out where your store leaks sales."}</h2>
-            <ul className="auth-perks">
-              <li><span>📊</span> Track your store's health over time</li>
-              <li><span>🎯</span> See exactly what's costing you sales</li>
-              <li><span>🛠</span> Get copy-paste fixes in your dashboard</li>
-              <li><span>🔔</span> Alerts when your score drops</li>
+        <div className="au2-side">
+          <div className="au2-logo">DIGI<span>STICK</span><i>SITECHECK</i></div>
+          <div className="au2-side-body">
+            <h2>{isLogin ? "Welcome back." : "Find where your store leaks sales."}</h2>
+            <p className="au2-side-sub">{isLogin ? "Your Growth Workspace is waiting." : "Free scan, free dashboard. Pay only if you want the fixes done for you."}</p>
+            <ul className="au2-perks">
+              {PERKS.map(([ic, t]) => (
+                <li key={t}><span className="au2-perk-ic"><I n={ic} size={15} /></span>{t}</li>
+              ))}
             </ul>
           </div>
-          <div className="auth-side-foot">Trusted by D2C brands &amp; Shopify stores</div>
+          <div className="au2-side-foot"><I n="shield" size={13} /> Trusted by D2C brands &amp; Shopify stores</div>
         </div>
 
-        {/* Right form panel */}
-        <div className="auth-form">
-          <div className="auth-tabs">
+        <div className="au2-form">
+          <div className="au2-tabs">
             <button className={isLogin ? "on" : ""} onClick={() => { setMode("login"); setMsg(""); }}>Log in</button>
             <button className={!isLogin ? "on" : ""} onClick={() => { setMode("signup"); setMsg(""); }}>Sign up</button>
-            <span className="auth-tab-ind" style={{ transform: isLogin ? "translateX(0)" : "translateX(100%)" }} />
           </div>
+          <h3>{isLogin ? "Log in to your dashboard" : "Create your free account"}</h3>
+          <p className="au2-sub">{isLogin ? "Pick up right where you left off." : "Takes 20 seconds. No card needed."}</p>
 
-          <h3 className="auth-h">{isLogin ? "Log in to your dashboard" : "Create your free account"}</h3>
-          <p className="auth-sub">{isLogin ? "Pick up right where you left off." : "No card needed. Your first scan saves instantly."}</p>
+          <label className="au2-label">Email</label>
+          <div className="au2-input"><I n="mail" size={15} /><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@store.com" autoComplete="email" /></div>
 
-          <label className="auth-label">Email</label>
-          <input className="auth-input" type="email" placeholder="you@store.com" value={email} onChange={(e) => setEmail(e.target.value)} autoFocus />
+          <label className="au2-label">Password</label>
+          <div className="au2-input"><I n="lock" size={15} /><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} placeholder={isLogin ? "Your password" : "Min. 6 characters"} autoComplete={isLogin ? "current-password" : "new-password"} /></div>
 
-          <label className="auth-label">Password</label>
-          <input className="auth-input" type="password" placeholder={isLogin ? "Your password" : "At least 6 characters"} value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} />
+          {msg && <div className="au2-msg">{msg}</div>}
 
-          <button className="auth-btn" onClick={submit} disabled={busy}>
-            {busy ? "Please wait…" : isLogin ? "Log in →" : "Create account →"}
-          </button>
+          <button className="au2-cta" onClick={submit} disabled={busy}>{busy ? "Please wait…" : isLogin ? "Log in" : "Create account"} <I n="arrowRight" size={14} /></button>
 
-          {msg && <div className="auth-msg">{msg}</div>}
-
-          <div className="auth-switch">
-            {isLogin ? (
-              <>New to SiteCheck? <button onClick={() => { setMode("signup"); setMsg(""); }}>Create an account</button></>
-            ) : (
-              <>Already have an account? <button onClick={() => { setMode("login"); setMsg(""); }}>Log in</button></>
-            )}
+          <div className="au2-switch">
+            {isLogin ? <>New to SiteCheck? <button onClick={() => { setMode("signup"); setMsg(""); }}>Create an account</button></>
+              : <>Already have an account? <button onClick={() => { setMode("login"); setMsg(""); }}>Log in</button></>}
           </div>
-          <div className="auth-legal">By continuing you agree to our <a href="/terms" target="_blank">Terms</a> &amp; <a href="/privacy" target="_blank">Privacy Policy</a>.</div>
+          <div className="au2-legal">By continuing you agree to our <a href="/terms">Terms</a> &amp; <a href="/privacy">Privacy Policy</a>.</div>
         </div>
       </div>
     </div>

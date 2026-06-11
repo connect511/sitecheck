@@ -201,6 +201,56 @@ function Consultant({ open, onClose, isPro, context, onUpgrade, ask, onAsked }) 
   );
 }
 
+
+/* Red pro-gate shown on locked tabs for free plans */
+function ProGate({ title, desc, items, timer, onUnlock }) {
+  return (
+    <div className="g-progate">
+      <div className="g-progate-alert"><I n="alert" size={14} /> PRO FEATURE LOCKED</div>
+      <h3>{title}</h3>
+      <p>{desc}</p>
+      <div className="g-progate-items">{items.map((i) => <span key={i}><I n="check" size={12} /> {i}</span>)}</div>
+      <div className="g-progate-price"><s>₹1,499</s> ₹799 <i>one-time · per store</i></div>
+      <button className="g-btn-danger" onClick={onUnlock}>Unlock Pro now</button>
+      <div className="g-progate-timer"><I n="clock" size={12} /> Launch price ends in {timer}</div>
+    </div>
+  );
+}
+
+/* Red revenue-alert upgrade popup — everything included in Pro */
+const PRO_FEATURES = [
+  ["file", "Your fixes, pre-written", "SEO titles, meta, FAQ and alt text written for your products"],
+  ["download", "Install-ready Shopify file", "One upload adds all 7 CRO sections to your theme"],
+  ["calendar", "14-day action plan", "Day-by-day order of attack with the why behind it"],
+  ["palette", "Theme Audit unlocked", "Theme score, blockers and Digistick comparisons"],
+  ["layers", "App Stack + Ads Strategy", "Gap-matched apps and a full ads playbook"],
+  ["bot", "AI Growth Consultant", "Scan-aware assistant + score history and auto re-scans"],
+];
+function ProPopup({ leak, timer, onClose, onUnlock }) {
+  return (
+    <div className="pp-overlay" onClick={onClose}>
+      <div className="pp-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="pp-alert"><span className="pp-pulse" /><I n="alert" size={15} /> REVENUE ALERT — your store is leaking {inr(leak)}/month</div>
+        <div className="pp-body">
+          <h3>Stop the leak. Unlock your Growth Plan.</h3>
+          <p className="pp-sub">Everything below is generated for <b>your store</b> from your actual scan:</p>
+          <div className="pp-list">
+            {PRO_FEATURES.map(([ic, t, d]) => (
+              <div className="pp-row" key={t}><span className="pp-ic"><I n={ic} size={16} /></span><div><b>{t}</b><span>{d}</span></div><span className="pp-check"><I n="check" size={12} /></span></div>
+            ))}
+          </div>
+          <div className="pp-foot">
+            <div className="pp-price"><s>₹1,499</s> ₹799 <i>/ one-time per store</i></div>
+            <button className="g-btn-danger pp-cta" onClick={onUnlock}>Unlock Growth Plan</button>
+          </div>
+          <div className="pp-timer"><I n="clock" size={12} /> Launch price ends in {timer} — then ₹1,499</div>
+          <button className="pp-later" onClick={onClose}>Maybe later</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const [user, setUser] = useState(null);
   const [authOpen, setAuthOpen] = useState(false);
@@ -219,6 +269,8 @@ export default function Dashboard() {
   const [aiAsk, setAiAsk] = useState("");
   const [done, setDone] = useState({});
   const [inbox, setInbox] = useState([]);
+  const [report, setReport] = useState(null);
+  const [proPop, setProPop] = useState(false);
   const configured = supabaseConfigured();
 
   useEffect(() => {
@@ -242,6 +294,19 @@ export default function Dashboard() {
     if (!active) return;
     try { setDone(JSON.parse(window.localStorage.getItem("ds_plan_" + active) || "{}")); } catch { setDone({}); }
   }, [active]);
+
+  // Pro upgrade popup — fires once per day, 20s after a free-plan store loads.
+  useEffect(() => {
+    const s = sites.find((x) => x.id === active);
+    if (!s || s.is_pro) return;
+    const today = new Date().toDateString();
+    try { if (window.localStorage.getItem("ds_pro_pop") === today) return; } catch {}
+    const t = setTimeout(() => {
+      setProPop(true);
+      try { window.localStorage.setItem("ds_pro_pop", today); } catch {}
+    }, 20000);
+    return () => clearTimeout(t);
+  }, [active, sites]);
   const toggleDone = (label) => {
     setDone((d) => {
       const next = { ...d, [label]: !d[label] };
@@ -368,6 +433,21 @@ export default function Dashboard() {
     setAiAsk(`How do I fix this on my store: ${label}? Give me exact steps and code if needed.`);
     setAiOpen(true);
   }
+  async function openReport(id) {
+    setBusy("report");
+    const r = await api("getReport", { report_id: id });
+    setBusy("");
+    if (r?.payload) { setReport(r.payload); window.scrollTo({ top: 0, behavior: "smooth" }); }
+    else alert(r?.error || "Could not load the report.");
+  }
+  function downloadInstallFile(text) {
+    const blob = new Blob([text], { type: "text/plain" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "ds-cro.liquid";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
 
   if (loading) return <div className="gcc"><div className="gcc-load">Loading your Growth Workspace…</div></div>;
   if (!configured) return (
@@ -457,7 +537,7 @@ export default function Dashboard() {
               <span className="gni-ic"><I n={ic} size={16} /></span>{t}
               {t === "Priority Fixes" && failed.length > 0 && <span className="gni-badge">{failed.length}</span>}
               {t === "Messages" && unread > 0 && <span className="gni-badge">{unread}</span>}
-              {["History", "Settings"].includes(t) && !isPro && <span className="gni-lock"><I n="lock" size={12} /></span>}
+              {["Theme Audit", "App Stack", "Ads Strategy", "History", "Settings"].includes(t) && !isPro && <span className="gni-lock"><I n="lock" size={12} /></span>}
             </button>
           ))}
         </nav>
@@ -637,7 +717,8 @@ export default function Dashboard() {
             )}
 
             {/* ============ THEME AUDIT ============ */}
-            {latest && tab === "Theme Audit" && (
+            {latest && tab === "Theme Audit" && !isPro && <ProGate title="Theme audit is a Pro feature" desc="See how much your current theme is costing you, every conversion blocker inside it, and how it compares to conversion-ready Digistick themes." items={["Theme conversion score", "Blockers with revenue impact", "Digistick theme comparison", "Upgrade recommendations"]} timer={launchLeft} onUnlock={() => unlockPro(activeSite.url)} />}
+            {latest && tab === "Theme Audit" && isPro && (
               <>
                 <div className="g-sec-h"><h2>Theme audit</h2><p>How much your current theme is helping — or costing — your conversions.</p></div>
                 <div className="g-2col">
@@ -676,7 +757,8 @@ export default function Dashboard() {
             )}
 
             {/* ============ APP STACK ============ */}
-            {latest && tab === "App Stack" && (
+            {latest && tab === "App Stack" && !isPro && <ProGate title="App stack audit is a Pro feature" desc="A full audit of what your store covers, plus the exact Shopify apps that close the gaps found in your scan — with revenue estimates for each." items={["Covered vs missing elements", "Gap-matched app picks", "Impact and difficulty scores", "Estimated revenue gain per app"]} timer={launchLeft} onUnlock={() => unlockPro(activeSite.url)} />}
+            {latest && tab === "App Stack" && isPro && (
               <>
                 <div className="g-sec-h"><h2>App stack audit</h2><p>What your store already covers, and the apps that close the gaps found in your scan.</p></div>
                 <div className="g-card" style={{ marginBottom: 18 }}>
@@ -702,7 +784,8 @@ export default function Dashboard() {
             )}
 
             {/* ============ ADS STRATEGY ============ */}
-            {latest && tab === "Ads Strategy" && (
+            {latest && tab === "Ads Strategy" && !isPro && <ProGate title="Ads strategy is a Pro feature" desc="Your ad readiness score, spend-risk analysis, recommended budget, audiences, creative angles, hooks, and a full campaign structure." items={["Ad readiness + risk analysis", "Campaign structure with budget split", "Audiences and creative angles", "Video hooks that convert"]} timer={launchLeft} onUnlock={() => unlockPro(activeSite.url)} />}
+            {latest && tab === "Ads Strategy" && isPro && (
               <>
                 <div className="g-sec-h"><h2>Ads strategy center</h2><p>Built from your store&apos;s readiness — fix conversion gaps before scaling spend.</p></div>
                 <div className="g-2col">
@@ -789,15 +872,70 @@ export default function Dashboard() {
             )}
 
             {/* ============ GROWTH PLAN ============ */}
-            {tab === "Growth Plan" && (
+            {tab === "Growth Plan" && !report && (
               <>
-                <div className="g-sec-h"><h2>Your Growth Plan</h2><p>Reports & fix-kits you&apos;ve purchased for this store.</p></div>
+                <div className="g-sec-h"><h2>Your Growth Plan</h2><p>Reports & fix-kits you&apos;ve purchased for this store — open one to see the full analysis.</p></div>
                 {siteReports.length === 0 ? (
                   isPro ? <div className="g-empty sm"><p>Your purchased fix-kit will appear here.</p></div>
                     : <div className="g-upsell"><div><b>No Growth Plan yet.</b><p>Unlock the Rs 799 plan to get written fixes, a growth blueprint, and copy-paste snippets saved to your account.</p></div><button className="g-btn-primary" onClick={() => unlockPro(activeSite.url)}>Get the Growth Plan — ₹799</button></div>
                 ) : siteReports.map((r) => (
-                  <div className="g-card g-kit" key={r.id}><div><b>Growth Plan (fix-kit)</b><span>{new Date(r.created_at).toLocaleDateString("en-IN")}</span></div><a className="g-btn-primary sm" href={"/?audit=" + encodeURIComponent(activeSite.url)}>Open <I n="arrowRight" size={12} /></a></div>
+                  <div className="g-card g-kit" key={r.id}><div><b>Growth Plan (fix-kit)</b><span>{new Date(r.created_at).toLocaleDateString("en-IN")} · written fixes, install file, 14-day plan</span></div><button className="g-btn-primary sm" onClick={() => openReport(r.id)} disabled={busy === "report"}>{busy === "report" ? "Opening…" : <>Open <I n="arrowRight" size={12} /></>}</button></div>
                 ))}
+              </>
+            )}
+            {tab === "Growth Plan" && report && (
+              <>
+                <button className="g-back" onClick={() => setReport(null)}><I n="arrowRight" size={13} style={{ transform: "rotate(180deg)" }} /> Back to plans</button>
+                <div className="g-sec-h"><h2>Growth Plan — {hostOf(activeSite.url)}</h2><p>{report.roadmap?.summary || report.summary || "Your personalized fix-kit."}</p></div>
+
+                {report.writtenFixes && (
+                  <div className="g-card rp-card">
+                    <div className="g-card-h"><h3><I n="file" size={15} /> Written fixes — ready to paste</h3></div>
+                    {report.writtenFixes.titles?.length > 0 && (<><div className="rp-label">SEO title options</div>{report.writtenFixes.titles.map((t, i) => <div className="rp-copy" key={i}>{t}</div>)}</>)}
+                    {report.writtenFixes.metaDescription && (<><div className="rp-label">Meta description</div><div className="rp-copy">{report.writtenFixes.metaDescription}</div></>)}
+                    {report.writtenFixes.faq?.length > 0 && (<><div className="rp-label">FAQ for your product pages</div>{report.writtenFixes.faq.map((f, i) => <div className="rp-faq" key={i}><b>{f.q}</b><p>{f.a}</p></div>)}</>)}
+                    {report.writtenFixes.altTexts?.length > 0 && (<><div className="rp-label">Image alt-text suggestions</div>{report.writtenFixes.altTexts.map((t, i) => <div className="rp-copy" key={i}>{t}</div>)}</>)}
+                  </div>
+                )}
+
+                {report.actionPlan?.days?.length > 0 && (
+                  <div className="g-card rp-card">
+                    <div className="g-card-h"><h3><I n="calendar" size={15} /> 14-day action plan</h3></div>
+                    {report.actionPlan.days.map((d, i) => (
+                      <div className="rp-day" key={i}><span className="rp-day-n">Day {d.day}</span><div><b>{d.task}</b><p>{d.why}</p></div></div>
+                    ))}
+                  </div>
+                )}
+
+                {report.installFile && (
+                  <div className="g-card rp-card rp-install">
+                    <div><div className="g-card-h" style={{ marginBottom: 4 }}><h3><I n="download" size={15} /> Install-ready Shopify file</h3></div>
+                    <p className="g-dim">ds-cro.liquid — upload once in your theme to add {report.snippets?.length || "all"} CRO sections.</p></div>
+                    <button className="g-btn-primary" onClick={() => downloadInstallFile(report.installFile)}>Download ds-cro.liquid</button>
+                  </div>
+                )}
+
+                {report.snippets?.length > 0 && (
+                  <div className="g-card rp-card">
+                    <div className="g-card-h"><h3><I n="layers" size={15} /> Copy-paste CRO sections ({report.snippets.length})</h3></div>
+                    {report.snippets.map((sn, i) => (
+                      <details className="rp-snippet" key={i}>
+                        <summary>{sn.name || sn.title || sn.id || `Section ${i + 1}`}</summary>
+                        {sn.where && <p className="g-dim">{sn.where}</p>}
+                        <pre>{sn.code || sn.liquid || JSON.stringify(sn, null, 2)}</pre>
+                      </details>
+                    ))}
+                  </div>
+                )}
+
+                {report.benchmark && (
+                  <div className="g-card rp-card">
+                    <div className="g-card-h"><h3><I n="target" size={15} /> Competitor benchmark</h3></div>
+                    {(Array.isArray(report.benchmark) ? report.benchmark : report.benchmark.rows || []).map((b, i) => (
+                      <div className="g-row" key={i}><div><b>{b.metric || b.label || b.name}</b><span>{b.note || b.detail || ""}</span></div><span className="rp-bench"><b style={{ color: color(b.you ?? b.yours) }}>{b.you ?? b.yours ?? "—"}</b> vs <b>{b.top ?? b.benchmark ?? b.target ?? "—"}</b></span></div>
+                    ))}
+                  </div>
+                )}
               </>
             )}
 
@@ -836,6 +974,8 @@ export default function Dashboard() {
           </>
         )}
       </main>
+
+      {activeSite && latest && !isPro && proPop && <ProPopup leak={leak} timer={launchLeft} onClose={() => setProPop(false)} onUnlock={() => { setProPop(false); unlockPro(activeSite.url); }} />}
 
       {activeSite && latest && (
         <>

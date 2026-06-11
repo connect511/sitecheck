@@ -134,6 +134,14 @@ export async function POST(req) {
       return Response.json({ scan: data });
     }
 
+    if (action === "getReport") {
+      const { report_id } = payload || {};
+      if (!report_id) return Response.json({ error: "report_id required" }, { status: 400 });
+      const { data, error } = await admin.from("reports").select("payload").eq("id", report_id).eq("user_id", user.id).single();
+      if (error || !data) return Response.json({ error: "Report not found." }, { status: 404 });
+      return Response.json({ payload: data.payload || {} });
+    }
+
     if (action === "saveReport") {
       const { site_id, report } = payload || {};
       // mark the site pro and save the report
