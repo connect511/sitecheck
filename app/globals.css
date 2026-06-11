@@ -546,7 +546,7 @@ body { background: var(--cream); color: var(--ink); font-family: var(--font); -w
 
 /* ============================================================
    v14: WARM PASTEL DASHBOARD (scoped under .dsh)
-   Soft pinks/creams, rounded cards, friendly Ã¢â‚¬â€ keeps all 7 tabs
+   Soft pinks/creams, rounded cards, friendly â€” keeps all 7 tabs
    ============================================================ */
 .dsh { --d-bg:#f3eef0; --d-panel:#ffffff; --d-panel2:#faf6f4; --d-line:#efe6e6; --d-ink:#2e2a33; --d-muted:#9b94a0;
   --d-blue:#2563eb; --d-yellow:#ffd166; --d-coral:#f47174; --d-purple:#4a3f5e; --d-mint:#d7f0e3; --d-green:#1f9d6b;
@@ -744,7 +744,7 @@ body { background: var(--cream); color: var(--ink); font-family: var(--font); -w
 .side-pro-h { color:#fff; font-weight:900; font-size:18px; margin-bottom:10px; }
 .side-pro-list { list-style:none; display:grid; gap:6px; margin-bottom:13px; }
 .side-pro-list li { color:rgba(255,255,255,.85); font-size:11.5px; padding-left:17px; position:relative; }
-.side-pro-list li::before { content:"Ã¢Å“â€œ"; position:absolute; left:0; color:var(--d-yellow); font-weight:800; }
+.side-pro-list li::before { content:"âœ“"; position:absolute; left:0; color:var(--d-yellow); font-weight:800; }
 .side-pro-price { display:flex; align-items:baseline; gap:8px; margin-bottom:6px; }
 .spp-old { color:rgba(255,255,255,.5); text-decoration:line-through; font-size:13px; }
 .spp-new { color:#fff; font-weight:900; font-size:26px; }
@@ -897,7 +897,7 @@ body { background: var(--cream); color: var(--ink); font-family: var(--font); -w
 .thm-desc { color:var(--d-muted,#6b6478); font-size:12.5px; line-height:1.55; margin:6px 0 12px; }
 .thm-feats { list-style:none; display:grid; gap:6px; margin-bottom:14px; }
 .thm-feats li { font-size:12px; color:var(--d-ink,#2a2435); padding-left:18px; position:relative; }
-.thm-feats li::before { content:"Ã¢Å“â€œ"; position:absolute; left:0; color:#16a34a; font-weight:800; }
+.thm-feats li::before { content:"âœ“"; position:absolute; left:0; color:#16a34a; font-weight:800; }
 .thm-price { display:flex; align-items:baseline; gap:8px; margin-bottom:12px; margin-top:auto; }
 .thm-price .thm-old { color:var(--d-muted,#9a93a8); text-decoration:line-through; font-size:13px; }
 .thm-price .thm-new { color:var(--d-ink,#2a2435); font-weight:900; font-size:22px; }
@@ -911,7 +911,7 @@ body { background: var(--cream); color: var(--ink); font-family: var(--font); -w
 @media (max-width:900px){ .thm-grid { grid-template-columns:1fr; } }
 
 /* ================================================================
-   LANDING V2 â€” reference-style redesign (appended overrides)
+   LANDING V2 — reference-style redesign (appended overrides)
    ================================================================ */
 
 /* --- Hero: cream canvas, ink type, highlight chips --- */
@@ -1087,7 +1087,7 @@ body { background: var(--cream); color: var(--ink); font-family: var(--font); -w
 }
 
 /* ================================================================
-   GROWTH COMMAND CENTER â€” premium SaaS dashboard (spec palette)
+   GROWTH COMMAND CENTER — premium SaaS dashboard (spec palette)
    ================================================================ */
 :root {
   --g-primary: #2E60B4; --g-secondary: #5B7FFF; --g-accent: #FFD166;
@@ -1243,7 +1243,7 @@ body { background: var(--cream); color: var(--ink); font-family: var(--font); -w
 .g-rank { width: 26px; height: 26px; border-radius: 50%; background: var(--g-bg); font-size: 11.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: var(--g-primary); }
 .g-list { list-style: none; display: flex; flex-direction: column; gap: 9px; }
 .g-list li { font-size: 12.5px; line-height: 1.5; padding-left: 18px; position: relative; color: #2b3345; }
-.g-list li::before { content: "â€¢"; position: absolute; left: 4px; color: var(--g-secondary); font-weight: 900; }
+.g-list li::before { content: "•"; position: absolute; left: 4px; color: var(--g-secondary); font-weight: 900; }
 .g-list.sm li { font-size: 11.5px; }
 
 /* Revenue leaks */
