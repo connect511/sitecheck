@@ -1476,3 +1476,60 @@ body { background: var(--cream); color: var(--ink); font-family: var(--font); -w
   .adm-search { width: 100%; margin-left: 0; }
   .adm-main { padding: 16px 14px 50px; }
 }
+
+/* ================================================================
+   GROWTH OS v2 — icon system, urgency hero, new modules
+   ================================================================ */
+.ico { vertical-align: -2px; flex-shrink: 0; }
+.g-nav-item .gni-ic { display: flex; align-items: center; justify-content: center; }
+.g-card-h h3 { display: flex; align-items: center; gap: 7px; }
+.g-rescan { display: inline-flex; align-items: center; gap: 7px; }
+.g-link { display: inline-flex; align-items: center; gap: 5px; }
+.g-passes span { display: inline-flex; align-items: center; gap: 5px; }
+
+/* Urgency-based hero colors */
+.g-hero.warn { background: linear-gradient(130deg, #b45309 0%, #f59e0b 75%); box-shadow: 0 18px 44px rgba(180,83,9,.32); }
+.g-hero.crit { background: linear-gradient(130deg, #991b1b 0%, var(--g-danger) 75%); box-shadow: 0 18px 44px rgba(239,68,68,.32); }
+
+/* Recovery tracker */
+.g-recov { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.g-recov-item { background: var(--g-bg); border-radius: 14px; padding: 13px 15px; }
+.g-recov-item span { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: var(--g-muted); }
+.g-recov-item b { font-size: 21px; font-weight: 900; letter-spacing: -.01em; }
+
+/* Purchase confidence */
+.g-conf { display: flex; gap: 18px; align-items: center; }
+.g-conf-r { flex: 1; min-width: 0; }
+.g-conf-r .g-dim { margin-bottom: 10px; }
+.g-conf-row { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 600; color: var(--g-danger); padding: 3px 0; }
+.g-conf-row.ok { color: var(--g-success); }
+
+/* Priority fix extras */
+.g-fix-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 7px; }
+.g-diff { display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; font-weight: 700; color: var(--g-muted); background: var(--g-bg); border-radius: 20px; padding: 4px 11px; }
+.g-genfix { display: inline-flex; align-items: center; gap: 6px; background: #eef3ff; color: var(--g-primary); border: 1px solid #d8e3fb; border-radius: 11px; font-family: var(--font); font-size: 11.5px; font-weight: 800; padding: 8px 13px; cursor: pointer; transition: background .15s; white-space: nowrap; }
+.g-genfix:hover { background: #e0eaff; }
+
+/* Theme audit */
+.g-blocker { width: 24px; height: 24px; border-radius: 50%; background: #fde8e8; color: var(--g-danger); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.g-ads-ready .cb { margin-top: 14px; text-align: left; }
+
+/* Ads risk */
+.g-risk { display: flex; align-items: center; justify-content: center; gap: 7px; font-size: 12.5px; font-weight: 700; border-radius: 12px; padding: 9px 14px; margin: 4px 0 10px; }
+.g-risk.ok { background: #effaf3; color: var(--g-success); }
+.g-risk.warn { background: #fff7e0; color: #b45309; }
+.g-risk.crit { background: #fde8e8; color: var(--g-danger); }
+
+/* Services recommended badge */
+.g-service { position: relative; }
+.g-service.rec { border: 2px solid var(--g-primary); box-shadow: 0 12px 30px rgba(46,96,180,.18); }
+.g-sv-rec { position: absolute; top: -10px; left: 16px; font-size: 9px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; background: var(--g-primary); color: #fff; border-radius: 20px; padding: 4px 11px; }
+
+/* Swipeable cards on mobile */
+@media (max-width: 880px) {
+  .g-swipe { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 12px; padding-bottom: 6px; -webkit-overflow-scrolling: touch; }
+  .g-swipe .g-card { min-width: 78%; scroll-snap-align: start; }
+  .g-recov { grid-template-columns: 1fr 1fr; }
+  .g-conf { flex-direction: column; align-items: flex-start; }
+  .g-leak-meta { gap: 10px; }
+}

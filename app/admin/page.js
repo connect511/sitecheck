@@ -3,10 +3,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { getSupabase, supabaseConfigured } from "../lib/supabaseClient";
 import AuthModal from "../AuthModal";
+import I from "../lib/icons";
 
 const STAGES = ["new", "contacted", "proposal", "won", "lost"];
-const STAGE_LABEL = { new: "🆕 New", contacted: "📞 Contacted", proposal: "📄 Proposal", won: "🏆 Won", lost: "✖ Lost" };
-const KINDS = [["note", "📝 Note"], ["recommendation", "✨ Recommendation"], ["offer", "💰 Offer"]];
+const STAGE_LABEL = { new: "New", contacted: "Contacted", proposal: "Proposal", won: "Won", lost: "Lost" };
+const KINDS = [["note", "Note"], ["recommendation", "Recommendation"], ["offer", "Offer"]];
 
 function hostOf(u) { return (u || "").replace(/^https?:\/\//, "").replace(/\/$/, ""); }
 function inr(n) { return "₹" + (n || 0).toLocaleString("en-IN"); }
@@ -124,19 +125,19 @@ export default function Admin() {
       <main className="g-main adm-main">
         <div className="adm-top">
           <div className="g-logo">DIGI<span>STICK</span><i>BACK OFFICE</i></div>
-          <div className="adm-top-r"><span className="g-dim">{user.email}</span><button className="g-rescan" onClick={loadOverview}>↻ Refresh</button><button className="g-rescan" onClick={logout}>Log out</button></div>
+          <div className="adm-top-r"><span className="g-dim">{user.email}</span><button className="g-rescan" onClick={loadOverview}><I n="refresh" size={14} /> Refresh</button><button className="g-rescan" onClick={logout}>Log out</button></div>
         </div>
 
         {/* ---- Overview stats ---- */}
         {stats && (
           <div className="adm-stats">
             {[
-              ["👥", stats.users, "Total clients", `+${stats.newUsers7d} this week`],
-              ["🏪", stats.sites, "Stores tracked", `${stats.scans} scans run`],
-              ["⭐", stats.proSites, "Pro unlocks", `${stats.conversion}% conversion`],
-              ["💰", inr(stats.revenue), "Revenue (est.)", `${stats.messagesSent} messages sent`],
+              ["users", stats.users, "Total clients", `+${stats.newUsers7d} this week`],
+              ["store", stats.sites, "Stores tracked", `${stats.scans} scans run`],
+              ["star", stats.proSites, "Pro unlocks", `${stats.conversion}% conversion`],
+              ["money", inr(stats.revenue), "Revenue (est.)", `${stats.messagesSent} messages sent`],
             ].map(([ic, v, l, sub]) => (
-              <div className="g-card adm-stat" key={l}><span className="adm-stat-ic">{ic}</span><div className="adm-stat-v">{v}</div><div className="adm-stat-l">{l}</div><div className="adm-stat-sub">{sub}</div></div>
+              <div className="g-card adm-stat" key={l}><span className="adm-stat-ic"><I n={ic} size={19} /></span><div className="adm-stat-v">{v}</div><div className="adm-stat-l">{l}</div><div className="adm-stat-sub">{sub}</div></div>
             ))}
           </div>
         )}
@@ -184,7 +185,7 @@ export default function Admin() {
           <div className="adm-drawer" onClick={(e) => e.stopPropagation()}>
             <div className="adm-d-head">
               <div><h3>{detail.user.email || "Client"}</h3><span className="g-dim">Joined {detail.user.created_at ? new Date(detail.user.created_at).toLocaleDateString("en-IN") : "—"} · {detail.reports.length} fix-kit{detail.reports.length !== 1 ? "s" : ""} purchased</span></div>
-              <button className="ai-x dark" onClick={() => setDetail(null)}>✕</button>
+              <button className="ai-x dark" onClick={() => setDetail(null)}><I n="x" size={15} /></button>
             </div>
 
             <div className="adm-d-sec">Stores</div>
@@ -203,7 +204,7 @@ export default function Admin() {
                     <b className="adm-site-score" style={{ color: scoreColor(latest?.overall) }}>{latest?.overall ?? "—"}</b>
                   </div>
                   {latest && <div className="adm-site-meta">{sScans.length} scans · last {ago(latest.created_at)} · {failed.length} open issues</div>}
-                  {failed.slice(0, 4).map((c) => <div className="adm-issue" key={c.label}>✕ {c.label}</div>)}
+                  {failed.slice(0, 4).map((c) => <div className="adm-issue" key={c.label}><I n="x" size={11} /> {c.label}</div>)}
                   {failed.length > 4 && <div className="g-dim" style={{ fontSize: 11 }}>+{failed.length - 4} more issues</div>}
                 </div>
               );
@@ -219,7 +220,7 @@ export default function Admin() {
               </div>
             ))}
 
-            <button className="g-btn-primary" style={{ marginTop: 14, width: "100%" }} onClick={() => { setMsgTo({ id: detail.user.id, email: detail.user.email, sites: detail.sites }); setMsg((m) => ({ ...m, site_id: detail.sites[0]?.id || "" })); }}>＋ Send message / recommendation</button>
+            <button className="g-btn-primary" style={{ marginTop: 14, width: "100%" }} onClick={() => { setMsgTo({ id: detail.user.id, email: detail.user.email, sites: detail.sites }); setMsg((m) => ({ ...m, site_id: detail.sites[0]?.id || "" })); }}>+ Send message / recommendation</button>
           </div>
         </div>
       )}
@@ -228,7 +229,7 @@ export default function Admin() {
       {msgTo && (
         <div className="adm-overlay" onClick={() => setMsgTo(null)}>
           <div className="adm-compose" onClick={(e) => e.stopPropagation()}>
-            <div className="adm-d-head"><h3>Message {msgTo.email}</h3><button className="ai-x dark" onClick={() => setMsgTo(null)}>✕</button></div>
+            <div className="adm-d-head"><h3>Message {msgTo.email}</h3><button className="ai-x dark" onClick={() => setMsgTo(null)}><I n="x" size={15} /></button></div>
             <div className="adm-c-row">
               <select value={msg.kind} onChange={(e) => setMsg((m) => ({ ...m, kind: e.target.value }))}>{KINDS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
               {msgTo.sites?.length > 0 && (

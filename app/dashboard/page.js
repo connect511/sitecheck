@@ -3,54 +3,38 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { getSupabase, supabaseConfigured } from "../lib/supabaseClient";
 import AuthModal from "../AuthModal";
+import I from "../lib/icons";
 
-/* ============ Navigation ============ */
+/* ============ Growth Workspace navigation ============ */
 const NAV = [
-  ["Dashboard", "▦"], ["Growth Opportunities", "🚀"], ["Revenue Leaks", "💸"], ["Ads Strategy", "📣"],
-  ["Competitors", "⚔"], ["Recommendations", "✨"], ["Messages", "💬"], ["Fix Kit", "🎁"], ["History", "📈"], ["Settings", "⚙"],
+  ["Overview", "gauge"], ["Priority Fixes", "wrench"], ["Theme Audit", "palette"], ["App Stack", "layers"],
+  ["Ads Strategy", "megaphone"], ["Competitors", "target"], ["Services", "briefcase"], ["Messages", "chat"],
+  ["Growth Plan", "gift"], ["History", "chart"], ["Settings", "settings"],
 ];
-const MOBILE_NAV = [["Dashboard", "🏠", "Home"], ["Revenue Leaks", "🚀", "Growth"], ["Ads Strategy", "📣", "Ads"], ["Recommendations", "🧰", "Tools"], ["Settings", "👤", "Profile"]];
+const MOBILE_NAV = [["Overview", "home", "Home"], ["Priority Fixes", "wrench", "Fixes"], ["Ads Strategy", "megaphone", "Ads"], ["App Stack", "layers", "Apps"], ["Settings", "settings", "Profile"]];
 
 /* Placeholder theme showcase — replace preview links + add real .zip assets before launch. */
 const THEMES = [
-  { id: "velocity", name: "Velocity", tag: "Best for D2C", cls: "thm-v", preview: "https://themes.shopify.com/", desc: "High-converting all-rounder with urgency, trust badges and a sticky mobile cart.", features: ["Sticky add-to-cart", "Trust & COD badges", "Speed-optimized"], uplift: "+18–25% conversion uplift" },
-  { id: "momentum", name: "Momentum", tag: "Best for fashion", cls: "thm-m", preview: "https://themes.shopify.com/", desc: "Visual-first layout built for apparel and lifestyle brands that sell on imagery.", features: ["Lookbook galleries", "Size-guide ready", "Reviews built in"], uplift: "+15–20% conversion uplift" },
-  { id: "pulse", name: "Pulse", tag: "Best for single-product", cls: "thm-p", preview: "https://themes.shopify.com/", desc: "Long-form landing-page style theme made to convert cold traffic into buyers.", features: ["Exit-intent offer", "FAQ + social proof", "Email capture"], uplift: "+20–30% on cold traffic" },
+  { id: "velocity", name: "Velocity", tag: "Best for D2C", cls: "thm-v", preview: "https://themes.shopify.com/", desc: "High-converting all-rounder with urgency, trust badges and a sticky mobile cart.", features: ["Sticky add-to-cart", "Trust & COD badges", "Speed-optimized"], uplift: "+18-25% conversion uplift" },
+  { id: "momentum", name: "Momentum", tag: "Best for fashion", cls: "thm-m", preview: "https://themes.shopify.com/", desc: "Visual-first layout built for apparel and lifestyle brands that sell on imagery.", features: ["Lookbook galleries", "Size-guide ready", "Reviews built in"], uplift: "+15-20% conversion uplift" },
+  { id: "pulse", name: "Pulse", tag: "Best for single-product", cls: "thm-p", preview: "https://themes.shopify.com/", desc: "Long-form landing-page style theme made to convert cold traffic into buyers.", features: ["Exit-intent offer", "FAQ + social proof", "Email capture"], uplift: "+20-30% on cold traffic" },
 ];
 
-/* Digistick services marketplace */
 const SERVICES = [
-  { ic: "⚡", name: "Store Speed Optimization", desc: "We take your Performance score above 85 — images, scripts, theme code, the works.", price: "From ₹4,999", cls: "sv-blue" },
-  { ic: "🔍", name: "SEO Optimization", desc: "Full on-page + technical SEO sprint: metas, schema, structure, content depth.", price: "From ₹9,999", cls: "sv-purple" },
-  { ic: "🛒", name: "CRO Upgrade", desc: "Trust, urgency, reviews, sticky cart — every conversion gap on your list, installed.", price: "From ₹7,999", cls: "sv-amber" },
-  { ic: "📣", name: "Meta Ads Management", desc: "Full-funnel campaign setup and management — creatives, audiences, scaling.", price: "From ₹15,000/mo", cls: "sv-green" },
-  { ic: "🏆", name: "Complete Growth Package", desc: "Speed + SEO + CRO + Ads under one roof. Your store, run like our best clients.", price: "Custom", cls: "sv-dark" },
+  { ic: "zap", key: "speed", name: "Store Speed Optimization", desc: "We take your Performance score above 85 — images, scripts, theme code, the works.", price: "From Rs 4,999", cls: "sv-blue" },
+  { ic: "search", key: "seo", name: "SEO Optimization", desc: "Full on-page + technical SEO sprint: metas, schema, structure, content depth.", price: "From Rs 9,999", cls: "sv-purple" },
+  { ic: "cart", key: "cro", name: "CRO Upgrade", desc: "Trust, urgency, reviews, sticky cart — every conversion gap on your list, installed.", price: "From Rs 7,999", cls: "sv-amber" },
+  { ic: "megaphone", key: "ads", name: "Meta Ads Management", desc: "Full-funnel campaign setup and management — creatives, audiences, scaling.", price: "From Rs 15,000/mo", cls: "sv-green" },
+  { ic: "trophy", key: "growth", name: "Complete Growth Package", desc: "Speed + SEO + CRO + Ads under one roof. Your store, run like our best clients.", price: "Custom", cls: "sv-dark" },
 ];
 
 /* ============ Helpers ============ */
-function color(v) {
-  if (v == null) return "var(--g-muted)";
-  if (v >= 90) return "var(--g-success)";
-  if (v >= 50) return "#d97706";
-  return "var(--g-danger)";
-}
-function overallColor(v) {
-  if (v == null) return "var(--g-muted)";
-  if (v >= 70) return "var(--g-success)";
-  if (v >= 50) return "#d97706";
-  return "var(--g-danger)";
-}
-function band(v) {
-  if (v == null) return "—";
-  if (v >= 85) return "Excellent";
-  if (v >= 70) return "Good";
-  if (v >= 50) return "Needs work";
-  return "Poor";
-}
+function color(v) { if (v == null) return "var(--g-muted)"; if (v >= 90) return "var(--g-success)"; if (v >= 50) return "#d97706"; return "var(--g-danger)"; }
+function overallColor(v) { if (v == null) return "var(--g-muted)"; if (v >= 70) return "var(--g-success)"; if (v >= 50) return "#d97706"; return "var(--g-danger)"; }
+function band(v) { if (v == null) return "—"; if (v >= 85) return "Excellent"; if (v >= 70) return "Good"; if (v >= 50) return "Needs work"; return "Poor"; }
 function inr(n) { return "₹" + (n || 0).toLocaleString("en-IN"); }
 function hostOf(u) { return (u || "").replace(/^https?:\/\//, "").replace(/\/$/, ""); }
 
-/* Deterministic per-domain revenue-leak estimate — same logic as the homepage so the numbers agree. */
 function computeLeak(url, checks, scores) {
   if (!checks || !checks.length) return null;
   const failed = checks.filter((c) => !c.ok);
@@ -62,14 +46,10 @@ function computeLeak(url, checks, scores) {
   else if (perf != null && perf < 90) base += 6000;
   const host = hostOf(url) || "x";
   let seed = 0; for (let i = 0; i < host.length; i++) seed = (seed * 31 + host.charCodeAt(i)) % 1000;
-  const variance = 1 + (seed / 1000) * 0.6;
-  let est = Math.round(base * variance);
+  let est = Math.round(base * (1 + (seed / 1000) * 0.6));
   est = Math.max(25000, Math.min(est, 100000));
-  est = Math.round(est / 500) * 500;
-  return est;
+  return Math.round(est / 500) * 500;
 }
-
-/* Split the leak across failed checks proportionally to their weight, so the action plan's ₹ figures add up. */
 function recoveryPerCheck(leak, failed) {
   if (!leak || !failed.length) return {};
   const totalW = failed.reduce((a, c) => a + (c.weight || 1) + (c.cat === "cro" ? 1 : 0), 0);
@@ -80,8 +60,6 @@ function recoveryPerCheck(leak, failed) {
   });
   return out;
 }
-
-/* Conversion score = % of CRO checks passing; Mobile experience derived from performance. */
 function deriveScores(checks, scores) {
   const cro = checks.filter((c) => c.cat === "cro");
   const croPass = cro.filter((c) => c.ok).length;
@@ -90,24 +68,36 @@ function deriveScores(checks, scores) {
   const mobile = perf == null ? null : Math.max(5, Math.min(100, Math.round(perf * 0.9 + (scores?.bestPractices || perf) * 0.1)));
   return { conversion, mobile };
 }
+/* Purchase Confidence Score — trust/reviews/urgency/guarantee signals from the actual checks */
+function confidenceScore(checks) {
+  const re = /review|trust|urgenc|scarcit|return|cod|guarantee|secure|badge|testimonial|social proof/i;
+  const rel = checks.filter((c) => re.test(c.label) || re.test(c.detail || ""));
+  if (!rel.length) return { score: null, rel: [] };
+  const pass = rel.filter((c) => c.ok).length;
+  return { score: Math.round((pass / rel.length) * 100), rel };
+}
+function difficultyOf(c) {
+  if (/lcp|speed|performance|core web|script/i.test(c.label)) return "Hard";
+  if ((c.weight || 1) >= 3) return "Medium";
+  return "Easy";
+}
+const TIME_OF = { Easy: "10-15 min", Medium: "30-45 min", Hard: "1-2 hrs" };
 
-/* Rule-based Shopify app recommendation engine driven by the actual failed checks. */
 function recommendApps(failed, scores) {
   const has = (re) => failed.some((c) => re.test(c.label) || re.test(c.detail || ""));
   const apps = [];
-  if (has(/review|social proof|testimonial/i)) apps.push({ name: "Judge.me", ic: "⭐", why: "Your scan found no product reviews — the #1 trust signal Indian buyers check before paying.", impact: 9, diff: "Easy", gain: "₹6,000–₹12,000/mo", link: "https://apps.shopify.com/judgeme" });
-  if (has(/review|ugc|photo/i)) apps.push({ name: "Loox", ic: "📸", why: "Photo reviews convert better than text for visual products — pairs well with UGC ads.", impact: 8, diff: "Easy", gain: "₹4,000–₹9,000/mo", link: "https://apps.shopify.com/loox" });
-  if ((scores?.performance ?? 100) < 75 || has(/image|alt|lcp|speed/i)) apps.push({ name: "TinyIMG", ic: "🗜", why: "Heavy images are dragging your speed score — auto-compression recovers load time without design loss.", impact: 8, diff: "Easy", gain: "₹3,000–₹8,000/mo", link: "https://apps.shopify.com/tinyimg" });
-  if (has(/urgency|scarcity|cart|upsell|checkout/i)) apps.push({ name: "ReConvert", ic: "🔁", why: "Missing post-purchase upsell — recover margin on every order you're already winning.", impact: 7, diff: "Medium", gain: "₹5,000–₹10,000/mo", link: "https://apps.shopify.com/reconvert" });
-  apps.push({ name: "Klaviyo", ic: "✉️", why: "Abandoned-cart and welcome flows typically recover 8–12% of lost checkouts on D2C stores.", impact: 9, diff: "Medium", gain: "₹8,000–₹20,000/mo", link: "https://apps.shopify.com/klaviyo-email-marketing" });
+  if (has(/review|social proof|testimonial/i)) apps.push({ name: "Judge.me", ic: "star", why: "Your scan found no product reviews — the #1 trust signal Indian buyers check before paying.", impact: 9, diff: "Easy", gain: "Rs 6,000-12,000/mo", link: "https://apps.shopify.com/judgeme" });
+  if (has(/review|ugc|photo/i)) apps.push({ name: "Loox", ic: "image", why: "Photo reviews convert better than text for visual products — pairs well with UGC ads.", impact: 8, diff: "Easy", gain: "Rs 4,000-9,000/mo", link: "https://apps.shopify.com/loox" });
+  if ((scores?.performance ?? 100) < 75 || has(/image|alt|lcp|speed/i)) apps.push({ name: "TinyIMG", ic: "zap", why: "Heavy images are dragging your speed score — auto-compression recovers load time without design loss.", impact: 8, diff: "Easy", gain: "Rs 3,000-8,000/mo", link: "https://apps.shopify.com/tinyimg" });
+  if (has(/urgency|scarcity|cart|upsell|checkout/i)) apps.push({ name: "ReConvert", ic: "repeat", why: "Missing post-purchase upsell — recover margin on every order you're already winning.", impact: 7, diff: "Medium", gain: "Rs 5,000-10,000/mo", link: "https://apps.shopify.com/reconvert" });
+  apps.push({ name: "Klaviyo", ic: "mail", why: "Abandoned-cart and welcome flows typically recover 8-12% of lost checkouts on D2C stores.", impact: 9, diff: "Medium", gain: "Rs 8,000-20,000/mo", link: "https://apps.shopify.com/klaviyo-email-marketing" });
   return apps.slice(0, 5);
 }
 
-/* Industry medians for the competitor view */
-const INDUSTRY = { performance: 55, seo: 78, accessibility: 80, bestPractices: 85 };
+const INDUSTRY = { performance: 55, seo: 78, accessibility: 80, bestPractices: 85, conversion: 62, mobile: 58 };
 
 /* ============ Small components ============ */
-function Gauge({ value, size = 132, stroke = 10, light = false }) {
+function Gauge({ value, size = 132, stroke = 10, light = false, label }) {
   const r = size / 2 - stroke - 2, c = 2 * Math.PI * r, pct = value == null ? 0 : value / 100;
   const col = light ? "#fff" : overallColor(value);
   return (
@@ -119,7 +109,7 @@ function Gauge({ value, size = 132, stroke = 10, light = false }) {
       </svg>
       <div className="gauge-c">
         <div className="gauge-v" style={{ color: col }}>{value ?? "—"}</div>
-        <div className="gauge-b" style={light ? { color: "rgba(255,255,255,.8)" } : {}}>{light ? "Growth Score" : band(value)}</div>
+        <div className="gauge-b" style={light ? { color: "rgba(255,255,255,.8)" } : {}}>{label || (light ? "Growth Score" : band(value))}</div>
       </div>
     </div>
   );
@@ -151,9 +141,9 @@ function CompareBar({ label, you, them, themLabel }) {
   );
 }
 
-/* AI Growth Consultant — floating assistant wired to the existing /api/chat route, Pro-gated like the report chat. */
+/* AI Growth Consultant — scan-aware, Pro-gated */
 const PRESETS = ["How can I improve sales?", "Which app should I install first?", "Which theme should I use?", "How much should I spend on ads?", "What is my biggest growth opportunity?"];
-function Consultant({ open, onClose, isPro, context, onUpgrade }) {
+function Consultant({ open, onClose, isPro, context, onUpgrade, ask, onAsked }) {
   const [msgs, setMsgs] = useState([{ role: "assistant", content: "Hi! I'm your growth consultant. I can see your latest scan — ask me anything about improving sales, speed, SEO or ads." }]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -161,27 +151,36 @@ function Consultant({ open, onClose, isPro, context, onUpgrade }) {
   const userTurns = msgs.filter((m) => m.role === "user").length;
   const capped = userTurns >= 8;
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, open]);
-  async function send(text) {
-    const t = (text || input).trim();
-    if (!t || busy || capped) return;
-    const next = [...msgs, { role: "user", content: t }];
-    setMsgs(next); setInput(""); setBusy(true);
-    try {
-      const res = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: next, context }) });
-      const j = await res.json();
-      setMsgs((m) => [...m, { role: "assistant", content: j.reply || "Sorry, try again." }]);
-    } catch { setMsgs((m) => [...m, { role: "assistant", content: "Network issue — please try again." }]); }
-    finally { setBusy(false); }
-  }
+
+  const send = useCallback(async (text) => {
+    const t = (text || "").trim();
+    if (!t || capped) return;
+    setMsgs((prev) => {
+      const next = [...prev, { role: "user", content: t }];
+      setBusy(true);
+      fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: next, context }) })
+        .then((r) => r.json())
+        .then((j) => setMsgs((m) => [...m, { role: "assistant", content: j.reply || "Sorry, try again." }]))
+        .catch(() => setMsgs((m) => [...m, { role: "assistant", content: "Network issue — please try again." }]))
+        .finally(() => setBusy(false));
+      return next;
+    });
+  }, [capped, context]);
+
+  // A "Generate fix" button elsewhere queued a question — send it once when the panel opens.
+  useEffect(() => {
+    if (open && isPro && ask) { send(ask); onAsked?.(); }
+  }, [open, isPro, ask]); // eslint-disable-line
+
   if (!open) return null;
   return (
     <div className="ai-panel">
-      <div className="ai-head"><span className="ai-dot" /> AI Growth Consultant<button className="ai-x" onClick={onClose}>✕</button></div>
+      <div className="ai-head"><span className="ai-dot" /> AI Growth Consultant<button className="ai-x" onClick={onClose}><I n="x" size={14} /></button></div>
       {!isPro ? (
         <div className="ai-gate">
-          <div className="ai-gate-ic">🔒</div>
+          <div className="ai-gate-ic"><I n="lock" size={30} /></div>
           <b>The AI consultant is a Pro feature</b>
-          <p>Unlock the ₹799 Growth Plan to chat with an assistant that understands your actual scan data.</p>
+          <p>Unlock the Rs 799 Growth Plan to chat with an assistant that understands your actual scan data.</p>
           <button className="g-btn-primary" onClick={onUpgrade}>Unlock Pro — ₹799</button>
         </div>
       ) : (
@@ -191,10 +190,10 @@ function Consultant({ open, onClose, isPro, context, onUpgrade }) {
             {busy && <div className="ai-msg assistant typing">Thinking…</div>}
             <div ref={endRef} />
           </div>
-          {userTurns === 0 && <div className="ai-presets">{PRESETS.map((p) => <button key={p} onClick={() => send(p)}>{p}</button>)}</div>}
+          {userTurns === 0 && !busy && <div className="ai-presets">{PRESETS.map((p) => <button key={p} onClick={() => send(p)}>{p}</button>)}</div>}
           <div className="ai-input">
-            <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} placeholder={capped ? "Message limit reached" : "Ask about your store…"} disabled={capped || busy} />
-            <button onClick={() => send()} disabled={capped || busy}>→</button>
+            <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { send(input); setInput(""); } }} placeholder={capped ? "Message limit reached" : "Ask about your store…"} disabled={capped || busy} />
+            <button onClick={() => { send(input); setInput(""); }} disabled={capped || busy}><I n="send" size={15} /></button>
           </div>
         </>
       )}
@@ -209,7 +208,7 @@ export default function Dashboard() {
   const [sites, setSites] = useState([]);
   const [scans, setScans] = useState([]);
   const [active, setActive] = useState(null);
-  const [tab, setTab] = useState("Dashboard");
+  const [tab, setTab] = useState("Overview");
   const [newUrl, setNewUrl] = useState("");
   const [compUrl, setCompUrl] = useState("");
   const [compData, setCompData] = useState(null);
@@ -217,30 +216,11 @@ export default function Dashboard() {
   const [reports, setReports] = useState([]);
   const [launchLeft, setLaunchLeft] = useState("48:00:00");
   const [aiOpen, setAiOpen] = useState(false);
-  const [done, setDone] = useState({}); // action-plan checkmarks, persisted per site
-  const [inbox, setInbox] = useState([]); // messages pushed by Digistick admins
+  const [aiAsk, setAiAsk] = useState("");
+  const [done, setDone] = useState({});
+  const [inbox, setInbox] = useState([]);
   const configured = supabaseConfigured();
 
-  // Load admin messages — RLS lets each user read only their own.
-  const loadInbox = useCallback(async () => {
-    const sb = getSupabase(); if (!sb) return;
-    const { data } = await sb.from("admin_messages").select("*").order("created_at", { ascending: false });
-    if (data) setInbox(data);
-  }, []);
-
-  // Opening the Messages tab marks unread items as read.
-  useEffect(() => {
-    if (tab !== "Messages") return;
-    const unread = inbox.filter((m) => !m.read_at);
-    if (!unread.length) return;
-    const sb = getSupabase(); if (!sb) return;
-    const now = new Date().toISOString();
-    sb.from("admin_messages").update({ read_at: now }).is("read_at", null).then(() => {
-      setInbox((ms) => ms.map((m) => m.read_at ? m : { ...m, read_at: now }));
-    });
-  }, [tab, inbox]);
-
-  // Launch discount countdown — 7 days from first visit (stored per browser so it's consistent, not fake-resetting)
   useEffect(() => {
     let end;
     try {
@@ -258,7 +238,6 @@ export default function Dashboard() {
     return () => clearInterval(id);
   }, []);
 
-  // Action-plan progress persistence
   useEffect(() => {
     if (!active) return;
     try { setDone(JSON.parse(window.localStorage.getItem("ds_plan_" + active) || "{}")); } catch { setDone({}); }
@@ -271,24 +250,36 @@ export default function Dashboard() {
     });
   };
 
+  const loadInbox = useCallback(async () => {
+    const sb = getSupabase(); if (!sb) return;
+    const { data } = await sb.from("admin_messages").select("*").order("created_at", { ascending: false });
+    if (data) setInbox(data);
+  }, []);
+  useEffect(() => {
+    if (tab !== "Messages") return;
+    const unread = inbox.filter((m) => !m.read_at);
+    if (!unread.length) return;
+    const sb = getSupabase(); if (!sb) return;
+    const now = new Date().toISOString();
+    sb.from("admin_messages").update({ read_at: now }).is("read_at", null).then(() => {
+      setInbox((ms) => ms.map((m) => m.read_at ? m : { ...m, read_at: now }));
+    });
+  }, [tab, inbox]);
+
   const token = useCallback(async () => {
     const sb = getSupabase(); if (!sb) return null;
     const { data } = await sb.auth.getSession();
     return data?.session?.access_token || null;
   }, []);
-
   const api = useCallback(async (action, payload) => {
     const t = await token();
     const res = await fetch("/api/dashboard", { method: "POST", headers: { "Content-Type": "application/json", Authorization: "Bearer " + t }, body: JSON.stringify({ action, payload }) });
     return res.json();
   }, [token]);
-
   const loadData = useCallback(async () => {
     const r = await api("list");
     if (r.sites) { setSites(r.sites); setScans(r.scans || []); setReports(r.reports || []); if (!active && r.sites[0]) setActive(r.sites[0].id); }
   }, [api, active]);
-
-  // One-time cleanup of any duplicate sites from before the find-or-create fix.
   const dedupedRef = useRef(false);
   const loadDataDeduped = useCallback(async () => {
     if (!dedupedRef.current) { dedupedRef.current = true; try { await api("dedupeSites"); } catch {} }
@@ -303,13 +294,10 @@ export default function Dashboard() {
     return () => sub?.subscription?.unsubscribe();
   }, [configured]); // eslint-disable-line
 
-  // Internal scan flow: arriving from the homepage with ?scan=URL runs the scan inside the dashboard.
   const scanQueuedRef = useRef(false);
   useEffect(() => {
     if (!user) return;
     const params = new URLSearchParams(window.location.search);
-
-    // Payment return: ?order_id=...&unlock=URL → verify + flip site to Pro.
     const orderId = params.get("order_id");
     const unlockUrl = params.get("unlock");
     if (orderId && unlockUrl && !scanQueuedRef.current) {
@@ -325,7 +313,6 @@ export default function Dashboard() {
       })();
       return;
     }
-
     const toScan = params.get("scan");
     if (toScan && !scanQueuedRef.current) {
       scanQueuedRef.current = true;
@@ -335,7 +322,7 @@ export default function Dashboard() {
         try {
           const r = await api("addSite", { url: toScan });
           if (r.site) {
-            setActive(r.site.id); setTab("Dashboard");
+            setActive(r.site.id); setTab("Overview");
             const d = await scan(r.site.url);
             if (d) await api("saveScan", { site_id: r.site.id, scores: d.pagespeed?.scores, checks: d.seo?.checks });
             await loadData();
@@ -354,8 +341,6 @@ export default function Dashboard() {
     try { const d = await scan(siteUrl); if (d) { await api("saveScan", { site_id: siteId, scores: d.pagespeed?.scores, checks: d.seo?.checks }); await loadData(); } }
     finally { setBusy(""); }
   }
-
-  // Internal checkout — opens Cashfree right inside the dashboard, returns here.
   async function unlockPro(siteUrl) {
     setBusy("checkout");
     try {
@@ -379,9 +364,12 @@ export default function Dashboard() {
     finally { setBusy(""); }
   }
   async function logout() { const sb = getSupabase(); await sb?.auth.signOut(); setUser(null); setSites([]); setScans([]); }
+  function generateFix(label) {
+    setAiAsk(`How do I fix this on my store: ${label}? Give me exact steps and code if needed.`);
+    setAiOpen(true);
+  }
 
-  if (loading) return <div className="gcc"><div className="gcc-load">Loading your Growth Command Center…</div></div>;
-
+  if (loading) return <div className="gcc"><div className="gcc-load">Loading your Growth Workspace…</div></div>;
   if (!configured) return (
     <div className="gcc"><div className="gcc-gate">
       <h2>Dashboard not configured</h2>
@@ -389,11 +377,10 @@ export default function Dashboard() {
       <a className="g-btn-primary" href="/">← Back to scanner</a>
     </div></div>
   );
-
   if (!user) return (
     <div className="gcc"><div className="gcc-gate">
       <div className="g-logo">DIGI<span>STICK</span><i>SITECHECK</i></div>
-      <h2>Your Growth Command Center</h2>
+      <h2>Your Growth Workspace</h2>
       <p>Log in to see how much revenue your store is leaking, why, and exactly what to fix next.</p>
       <button className="g-btn-primary" onClick={() => setAuthOpen(true)}>Log in / Sign up</button>
       <a className="gcc-back" href="/">← Back to free scanner</a>
@@ -401,7 +388,7 @@ export default function Dashboard() {
     </div></div>
   );
 
-  /* ===== Derived growth data — everything below renders from the real scan ===== */
+  /* ===== Derived growth data ===== */
   const activeSite = sites.find((s) => s.id === active);
   const siteScans = scans.filter((s) => s.site_id === active).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   const latest = siteScans[0];
@@ -418,34 +405,42 @@ export default function Dashboard() {
   const recovery = leak ? Math.round(leak * 0.65 / 500) * 500 : null;
   const perCheck = recoveryPerCheck(leak, failed);
   const { conversion, mobile } = deriveScores(checks, latest?.scores || {});
+  const conf = confidenceScore(checks);
   const planItems = priority.slice(0, 6);
   const doneCount = planItems.filter((c) => done[c.label]).length;
   const planPct = planItems.length ? Math.round((doneCount / planItems.length) * 100) : 0;
+  const recovered = failed.filter((c) => done[c.label]).reduce((a, c) => a + (perCheck[c.label] || 0), 0);
+  const remaining = Math.max(0, (recovery || 0) - recovered);
+  const projected = latest ? Math.min(100, (latest.overall || 0) + Math.min(28, failed.length * 3) + 4) : null;
   const apps = recommendApps(failed, latest?.scores);
   const adReadiness = latest ? Math.round(((latest.scores?.performance || 0) * 0.4 + (conversion || 0) * 0.4 + (latest.scores?.seo || 0) * 0.2)) : null;
+  const adsRisk = adReadiness == null ? null : adReadiness >= 75 ? { lvl: "Low", cls: "ok", note: "Your store converts well enough to scale paid traffic profitably." } : adReadiness >= 55 ? { lvl: "Medium", cls: "warn", note: `Run small budgets while you close the gaps — roughly ${inr(Math.round((leak || 0) * 0.2 / 500) * 500)}/mo of ad spend would currently be wasted on conversion leaks.` } : { lvl: "High", cls: "crit", note: `Fix your leaks before spending — an estimated ${inr(Math.round((leak || 0) * 0.35 / 500) * 500)}/mo of ad spend would be burned by your current conversion gaps.` };
+  const themeBlockers = failed.filter((c) => c.cat === "cro");
+  const themeScore = latest ? Math.round((conversion || 0) * 0.6 + (latest.scores?.performance || 0) * 0.4) : null;
+  const heroMood = !latest ? "" : latest.overall >= 70 ? "" : latest.overall >= 50 ? "warn" : "crit";
   const status = !latest ? "Not scanned yet" : latest.overall >= 85 ? "Excellent — ready to scale" : latest.overall >= 70 ? "Good but losing conversions" : latest.overall >= 50 ? "Leaking revenue — fix soon" : "Critical — losing buyers daily";
-  const chatContext = latest ? { url: activeSite?.url, scores: latest.scores, conversion, failed: failed.map((c) => c.label).slice(0, 12), leak } : null;
+  const chatContext = latest ? { url: activeSite?.url, scores: latest.scores, conversion, confidence: conf.score, failed: failed.map((c) => c.label).slice(0, 12), leak } : null;
+  const recommendedService = !latest ? null : (latest.scores?.performance || 0) < 55 ? "speed" : (conversion || 0) < 55 ? "cro" : (latest.scores?.seo || 0) < 70 ? "seo" : "ads";
 
-  /* Activity timeline from real events */
   const activity = [
     ...siteScans.slice(0, 6).map((s, i) => {
       const older = siteScans[i + 1];
       const d = older ? s.overall - older.overall : null;
-      return { t: s.created_at, ic: d != null && d > 0 ? "📈" : "🔍", text: d != null && d !== 0 ? `Scan completed — growth score ${d > 0 ? "up" : "down"} ${Math.abs(d)} pts to ${s.overall}` : `Store scanned — growth score ${s.overall}` };
+      return { t: s.created_at, ic: d != null && d > 0 ? "trend" : "search", text: d != null && d !== 0 ? `Scan completed — growth score ${d > 0 ? "up" : "down"} ${Math.abs(d)} pts to ${s.overall}` : `Store scanned — growth score ${s.overall}` };
     }),
-    ...siteReports.map((r) => ({ t: r.created_at, ic: "🎁", text: "Growth Plan (fix-kit) unlocked — recommendations saved to this account" })),
+    ...siteReports.map((r) => ({ t: r.created_at, ic: "gift", text: "Growth Plan unlocked — recommendations saved to this account" })),
   ].sort((a, b) => new Date(b.t) - new Date(a.t)).slice(0, 8);
 
   const go = (t) => { setTab(t); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const unread = inbox.filter((m) => !m.read_at).length;
 
   return (
     <div className="gcc">
-      {/* ===== Sidebar ===== */}
       <aside className="g-side">
-        <a href="/" className="g-logo">DIGI<span>STICK</span><i>SITECHECK</i></a>
+        <a href="/" className="g-logo">DIGI<span>STICK</span><i>GROWTH OS</i></a>
         <div className="g-site-pick">
           {sites.map((s) => (
-            <button key={s.id} className={`g-site ${active === s.id ? "on" : ""}`} onClick={() => { setActive(s.id); setTab("Dashboard"); setCompData(null); }}>
+            <button key={s.id} className={`g-site ${active === s.id ? "on" : ""}`} onClick={() => { setActive(s.id); setTab("Overview"); setCompData(null); }}>
               <span className="g-site-dot" style={{ background: color(scans.filter((x) => x.site_id === s.id)[0]?.overall) }} />
               <span className="g-site-url">{hostOf(s.label || s.url)}</span>
               {s.is_pro && <span className="g-site-pro">PRO</span>}
@@ -459,11 +454,10 @@ export default function Dashboard() {
         <nav className="g-nav">
           {NAV.map(([t, ic]) => (
             <button key={t} className={`g-nav-item ${tab === t ? "on" : ""}`} onClick={() => go(t)}>
-              <span className="gni-ic">{ic}</span>{t}
-              {t === "Revenue Leaks" && failed.length > 0 && <span className="gni-badge">{failed.length}</span>}
-              {t === "Messages" && inbox.filter((m) => !m.read_at).length > 0 && <span className="gni-badge">{inbox.filter((m) => !m.read_at).length}</span>}
-              {t === "Messages" && inbox.filter((m) => !m.read_at).length > 0 && <span className="gni-badge">{inbox.filter((m) => !m.read_at).length}</span>}
-              {["History", "Settings"].includes(t) && !isPro && <span className="gni-lock">🔒</span>}
+              <span className="gni-ic"><I n={ic} size={16} /></span>{t}
+              {t === "Priority Fixes" && failed.length > 0 && <span className="gni-badge">{failed.length}</span>}
+              {t === "Messages" && unread > 0 && <span className="gni-badge">{unread}</span>}
+              {["History", "Settings"].includes(t) && !isPro && <span className="gni-lock"><I n="lock" size={12} /></span>}
             </button>
           ))}
         </nav>
@@ -473,16 +467,15 @@ export default function Dashboard() {
               <div className="g-plan-tag">FREE PLAN</div>
               <p>Unlock your full Growth Plan — fixes, history, AI consultant.</p>
               <div className="g-plan-price"><s>₹1,499</s> ₹799</div>
-              <div className="g-plan-timer">🔥 Launch price ends in {launchLeft}</div>
+              <div className="g-plan-timer">Launch price ends in {launchLeft}</div>
               <button className="g-btn-accent" onClick={() => unlockPro(activeSite.url)}>Upgrade now</button>
             </div>
           )}
-          {activeSite && isPro && <div className="g-plan pro"><div className="g-plan-tag ok">✓ PRO ACTIVE</div><p>All growth features unlocked for this store.</p></div>}
+          {activeSite && isPro && <div className="g-plan pro"><div className="g-plan-tag ok">PRO ACTIVE</div><p>All growth features unlocked for this store.</p></div>}
           <div className="g-acct"><span>{user.email}</span><button onClick={logout}>Log out</button></div>
         </div>
       </aside>
 
-      {/* ===== Main ===== */}
       <main className="g-main">
         {(busy === "scanning" || busy === "unlocking") && (
           <div className="g-scanning">
@@ -504,26 +497,25 @@ export default function Dashboard() {
                 <h1>{hostOf(activeSite.url)}</h1>
                 <span className="g-head-sub">{latest ? `Last scanned ${new Date(latest.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}` : "Not scanned yet"} · {siteScans.length} scan{siteScans.length !== 1 ? "s" : ""}</span>
               </div>
-              <button className="g-rescan" onClick={() => runScan(activeSite.url, activeSite.id)} disabled={busy === "scanning"}>↻ Re-scan now</button>
+              <button className="g-rescan" onClick={() => runScan(activeSite.url, activeSite.id)} disabled={busy === "scanning"}><I n="refresh" size={14} /> Re-scan now</button>
             </div>
 
             {!latest && tab !== "Settings" && <div className="g-empty"><h3>No scan yet</h3><p>Hit &quot;Re-scan now&quot; to run the first audit on this store.</p></div>}
 
-            {/* ============ DASHBOARD ============ */}
-            {latest && tab === "Dashboard" && (
+            {/* ============ OVERVIEW ============ */}
+            {latest && tab === "Overview" && (
               <>
-                {/* HERO — Revenue Leak Alert */}
-                <div className="g-hero">
+                <div className={`g-hero ${heroMood}`}>
                   <div className="g-hero-l">
                     <div className="g-hero-alert"><span className="g-pulse" /> REVENUE LEAK ALERT</div>
                     <div className="g-hero-leak">{inr(leak)}<span>/month</span></div>
                     <div className="g-hero-rec">Potential recovery <b>+{inr(recovery)}/month</b></div>
                     <div className="g-hero-status">Store status: <b>{status}</b></div>
                     <div className="g-hero-ctas">
-                      <button className="g-btn-accent" onClick={() => go("Revenue Leaks")}>Fix My Store</button>
+                      <button className="g-btn-accent" onClick={() => go("Priority Fixes")}>Fix My Store</button>
                       {!isPro
-                        ? <button className="g-btn-ghost" onClick={() => unlockPro(activeSite.url)}>Unlock Growth Plan</button>
-                        : <button className="g-btn-ghost" onClick={() => go("Fix Kit")}>Open Growth Plan</button>}
+                        ? <button className="g-btn-ghost" onClick={() => unlockPro(activeSite.url)}>Open Growth Plan</button>
+                        : <button className="g-btn-ghost" onClick={() => go("Growth Plan")}>Open Growth Plan</button>}
                       <a className="g-btn-ghost" href="https://digistick.in" target="_blank" rel="noopener noreferrer">Book Digistick</a>
                     </div>
                   </div>
@@ -533,16 +525,15 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* GROWTH SCORE CARDS */}
-                <div className="g-cards4">
+                <div className="g-cards4 g-swipe">
                   {[
-                    ["⚡", "Speed Score", latest.scores?.performance, `Revenue impact ~${inr(Math.round((leak || 0) * 0.3 / 500) * 500)}/mo`, "Recovery: fix images & scripts"],
-                    ["🔍", "SEO Score", latest.scores?.seo, "Traffic potential: +25–40% organic", "Metas, schema & structure"],
-                    ["🛒", "Conversion Score", conversion, `Potential sales increase +${Math.max(5, Math.round((100 - (conversion || 0)) / 3))}%`, `${checks.filter((c) => c.cat === "cro" && !c.ok).length} CRO gaps open`],
-                    ["📱", "Mobile Experience", mobile, `Mobile revenue impact ~${inr(Math.round((leak || 0) * 0.45 / 500) * 500)}/mo`, "70%+ of Indian D2C traffic is mobile"],
+                    ["zap", "Speed Score", latest.scores?.performance, `Revenue impact ~${inr(Math.round((leak || 0) * 0.3 / 500) * 500)}/mo`, "Recovery: fix images & scripts"],
+                    ["search", "SEO Score", latest.scores?.seo, "Traffic potential: +25-40% organic", "Metas, schema & structure"],
+                    ["cart", "Conversion Score", conversion, `Potential sales increase +${Math.max(5, Math.round((100 - (conversion || 0)) / 3))}%`, `${themeBlockers.length} CRO gaps open`],
+                    ["mobile", "Mobile Experience", mobile, `Mobile revenue impact ~${inr(Math.round((leak || 0) * 0.45 / 500) * 500)}/mo`, "70%+ of Indian D2C traffic is mobile"],
                   ].map(([ic, lbl, v, impact, sub]) => (
                     <div className="g-card g-score" key={lbl}>
-                      <div className="g-score-top"><span className="g-score-ic">{ic}</span><span className="g-score-band" style={{ color: color(v) }}>{band(v)}</span></div>
+                      <div className="g-score-top"><span className="g-score-ic"><I n={ic} size={20} /></span><span className="g-score-band" style={{ color: color(v) }}>{band(v)}</span></div>
                       <div className="g-score-v" style={{ color: color(v) }}>{v ?? "—"}<span>/100</span></div>
                       <div className="g-score-l">{lbl}</div>
                       <div className="g-score-bar"><span style={{ width: (v || 0) + "%", background: color(v) }} /></div>
@@ -552,11 +543,36 @@ export default function Dashboard() {
                   ))}
                 </div>
 
-                {/* ACTION PLAN + ACTIVITY */}
+                {/* Recovery tracker + Purchase confidence */}
+                <div className="g-2col">
+                  <div className="g-card">
+                    <div className="g-card-h"><h3>Recovery tracker</h3><span className="g-chip">{planPct}% of plan done</span></div>
+                    <div className="g-recov">
+                      <div className="g-recov-item"><span>Recovered so far</span><b style={{ color: "var(--g-success)" }}>{inr(recovered)}</b></div>
+                      <div className="g-recov-item"><span>Remaining opportunity</span><b style={{ color: "var(--g-danger)" }}>{inr(remaining)}</b></div>
+                      <div className="g-recov-item"><span>Growth score today</span><b>{latest.overall}</b></div>
+                      <div className="g-recov-item"><span>Projected after fixes</span><b style={{ color: "var(--g-primary)" }}>{projected}</b></div>
+                    </div>
+                    <div className="g-progress"><span style={{ width: planPct + "%" }} /><i>{planPct}% complete</i></div>
+                    <button className="g-link" onClick={() => go("Priority Fixes")}>Continue fixing <I n="arrowRight" size={13} /></button>
+                  </div>
+                  <div className="g-card">
+                    <div className="g-card-h"><h3>Purchase confidence score</h3></div>
+                    <div className="g-conf">
+                      <Gauge value={conf.score} size={110} label="Buyer trust" />
+                      <div className="g-conf-r">
+                        <p className="g-dim">{conf.score == null ? "Not enough trust signals detected to score." : conf.score >= 75 ? "Buyers see strong trust signals on your store." : `Weak trust signals are costing you an estimated ${inr(Math.round((leak || 0) * 0.35 / 500) * 500)}/mo in abandoned purchases.`}</p>
+                        {conf.rel.slice(0, 4).map((c) => (
+                          <div className={`g-conf-row ${c.ok ? "ok" : ""}`} key={c.label}><I n={c.ok ? "check" : "x"} size={13} /> {c.label}</div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="g-2col">
                   <div className="g-card">
                     <div className="g-card-h"><h3>Today&apos;s action plan</h3><span className="g-chip">{doneCount}/{planItems.length} done</span></div>
-                    <div className="g-progress"><span style={{ width: planPct + "%" }} /><i>{planPct}% complete{planPct === 100 ? " 🎉" : ""}</i></div>
                     {planItems.length === 0 && <div className="g-empty sm"><p>Every check passed — your store is in great shape. Re-scan weekly to keep it that way.</p></div>}
                     {planItems.map((c) => (
                       <label className={`g-task ${done[c.label] ? "done" : ""}`} key={c.label}>
@@ -565,7 +581,7 @@ export default function Dashboard() {
                         <span className="g-task-rec">+{inr(perCheck[c.label])}<i>recovery</i></span>
                       </label>
                     ))}
-                    {failed.length > planItems.length && <button className="g-link" onClick={() => go("Revenue Leaks")}>See all {failed.length} leaks →</button>}
+                    {failed.length > 0 && <button className="g-link" onClick={() => go("Priority Fixes")}>Open all {failed.length} fixes <I n="arrowRight" size={13} /></button>}
                   </div>
                   <div className="g-card">
                     <div className="g-card-h"><h3>Recent activity</h3></div>
@@ -573,61 +589,115 @@ export default function Dashboard() {
                       {activity.length === 0 && <p className="g-dim">Activity will appear here as you scan and fix.</p>}
                       {activity.map((a, i) => (
                         <div className="g-tl-item" key={i}>
-                          <span className="g-tl-ic">{a.ic}</span>
+                          <span className="g-tl-ic"><I n={a.ic} size={14} /></span>
                           <div><p>{a.text}</p><time>{new Date(a.t).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}</time></div>
                         </div>
                       ))}
                     </div>
                     <div className="g-card-h" style={{ marginTop: 18 }}><h3>Score trend</h3>{!isPro && <span className="g-lock">PRO</span>}</div>
-                    {isPro ? <Spark scans={siteScans} /> : <button className="g-trend-locked" onClick={() => unlockPro(activeSite.url)}>Unlock Pro to track your score over time →</button>}
+                    {isPro ? <Spark scans={siteScans} /> : <button className="g-trend-locked" onClick={() => unlockPro(activeSite.url)}>Unlock Pro to track your score over time</button>}
                   </div>
                 </div>
               </>
             )}
 
-            {/* ============ GROWTH OPPORTUNITIES ============ */}
-            {latest && tab === "Growth Opportunities" && (
+            {/* ============ PRIORITY FIXES ============ */}
+            {latest && tab === "Priority Fixes" && (
               <>
-                <div className="g-sec-h"><h2>Growth opportunities</h2><p>Ranked by revenue impact for {hostOf(activeSite.url)} — every item comes from your actual scan.</p></div>
-                <div className="g-cards3">
-                  <div className="g-card g-opp"><div className="g-opp-ic ob">🛒</div><h3>Close your CRO gaps</h3><p>{checks.filter((c) => c.cat === "cro" && !c.ok).length} conversion elements missing. Worth ~{inr(Math.round((leak || 0) * 0.45 / 500) * 500)}/mo.</p><button className="g-link" onClick={() => go("Revenue Leaks")}>View leaks →</button></div>
-                  <div className="g-card g-opp"><div className="g-opp-ic oa">⚡</div><h3>Speed up mobile</h3><p>Performance is {latest.scores?.performance ?? "—"}/100. Every second of load time costs ~7% of conversions.</p><button className="g-link" onClick={() => go("Recommendations")}>Get tools →</button></div>
-                  <div className="g-card g-opp"><div className="g-opp-ic og">📣</div><h3>Start paid traffic right</h3><p>Your ad readiness is {adReadiness ?? "—"}/100. Fix the leaks first, then scale with a structured funnel.</p><button className="g-link" onClick={() => go("Ads Strategy")}>See ads plan →</button></div>
-                </div>
-                <div className="g-card">
-                  <div className="g-card-h"><h3>Quick wins this week</h3><span className="g-chip">{Math.min(5, priority.length)} items</span></div>
-                  {priority.slice(0, 5).map((c, i) => (
-                    <div className="g-row" key={c.label}><span className="g-rank">{i + 1}</span><div><b>{c.label}</b><span>{c.detail}</span></div><span className="g-task-rec">+{inr(perCheck[c.label])}<i>est/mo</i></span></div>
-                  ))}
-                  {priority.length === 0 && <p className="g-dim">No open issues — you&apos;re ready to scale traffic.</p>}
-                </div>
-              </>
-            )}
-
-            {/* ============ REVENUE LEAKS ============ */}
-            {latest && tab === "Revenue Leaks" && (
-              <>
-                <div className="g-sec-h"><h2>Revenue leaks</h2><p>Estimated {inr(leak)}/month at stake · {failed.length} open issue{failed.length !== 1 ? "s" : ""} · check items off as you fix them</p></div>
-                <div className="g-progress big"><span style={{ width: planPct + "%" }} /><i>{planPct}% of your top plan complete</i></div>
-                {priority.length === 0 && <div className="g-empty"><h3>No leaks 🎉</h3><p>Every check passed on the last scan.</p></div>}
-                {priority.map((c, i) => (
-                  <div className="g-leak" key={c.label}>
-                    <label className="g-leak-check"><input type="checkbox" checked={!!done[c.label]} onChange={() => toggleDone(c.label)} /></label>
-                    <span className="g-rank">{i + 1}</span>
-                    <div className="g-leak-body">
-                      <b>{c.label}</b><span>{c.detail}</span>
-                      {(c.fix || c.why) && <details><summary>How to fix</summary><p>{c.why ? <><b>Why it matters:</b> {c.why}<br /></> : null}<b>Fix:</b> {c.fix || "Open the relevant section in your store editor and apply the change. The ₹799 Growth Plan gives you copy-paste code for this."}</p></details>}
+                <div className="g-sec-h"><h2>Priority fixes</h2><p>Estimated {inr(leak)}/month at stake · {failed.length} open issue{failed.length !== 1 ? "s" : ""} · ranked by revenue impact</p></div>
+                <div className="g-progress big"><span style={{ width: planPct + "%" }} /><i>{planPct}% of your top plan complete · {inr(recovered)} recovered</i></div>
+                {priority.length === 0 && <div className="g-empty"><h3>No open fixes</h3><p>Every check passed on the last scan.</p></div>}
+                {priority.map((c, i) => {
+                  const diff = difficultyOf(c);
+                  return (
+                    <div className="g-leak" key={c.label}>
+                      <label className="g-leak-check"><input type="checkbox" checked={!!done[c.label]} onChange={() => toggleDone(c.label)} /></label>
+                      <span className="g-rank">{i + 1}</span>
+                      <div className="g-leak-body">
+                        <b>{c.label}</b><span>{c.detail}</span>
+                        <div className="g-fix-meta">
+                          <span className={`g-impact ${(c.weight || 1) >= 3 ? "high" : (c.weight || 1) >= 2 ? "med" : "low"}`}>{(c.weight || 1) >= 3 ? "High" : (c.weight || 1) >= 2 ? "Medium" : "Low"} impact</span>
+                          <span className="g-diff"><I n="scale" size={12} /> {diff}</span>
+                          <span className="g-diff"><I n="clock" size={12} /> {TIME_OF[diff]}</span>
+                        </div>
+                        {(c.fix || c.why) && <details><summary>How to fix</summary><p>{c.why ? <><b>Why it matters:</b> {c.why}<br /></> : null}<b>Fix:</b> {c.fix || "Open the relevant section in your store editor and apply the change. The Rs 799 Growth Plan gives you copy-paste code for this."}</p></details>}
+                      </div>
+                      <div className="g-leak-meta">
+                        <span className="g-task-rec">+{inr(perCheck[c.label])}<i>recovery</i></span>
+                        <button className="g-genfix" onClick={() => isPro ? generateFix(c.label) : unlockPro(activeSite.url)}><I n="bot" size={13} /> Generate fix</button>
+                      </div>
                     </div>
-                    <div className="g-leak-meta">
-                      <span className={`g-impact ${(c.weight || 1) >= 3 ? "high" : (c.weight || 1) >= 2 ? "med" : "low"}`}>{(c.weight || 1) >= 3 ? "High" : (c.weight || 1) >= 2 ? "Medium" : "Low"} impact</span>
-                      <span className="g-task-rec">+{inr(perCheck[c.label])}<i>recovery</i></span>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
                 {!isPro && failed.length > 0 && (
-                  <div className="g-upsell"><div><b>Want these fixed for you?</b><p>The ₹799 Growth Plan writes your fixes, gives you an install-ready Shopify file, and a 14-day plan.</p></div><button className="g-btn-primary" onClick={() => unlockPro(activeSite.url)}>Unlock Growth Plan — ₹799</button></div>
+                  <div className="g-upsell"><div><b>Want these fixed for you?</b><p>The Rs 799 Growth Plan writes your fixes, gives you an install-ready Shopify file, and a 14-day plan.</p></div><button className="g-btn-primary" onClick={() => unlockPro(activeSite.url)}>Unlock Growth Plan — ₹799</button></div>
                 )}
-                {passed.length > 0 && <div className="g-card"><div className="g-card-h"><h3>Passing ({passed.length})</h3></div><div className="g-passes">{passed.map((c) => <span key={c.label}>✓ {c.label}</span>)}</div></div>}
+                {passed.length > 0 && <div className="g-card"><div className="g-card-h"><h3>Passing ({passed.length})</h3></div><div className="g-passes">{passed.map((c) => <span key={c.label}><I n="check" size={11} /> {c.label}</span>)}</div></div>}
+              </>
+            )}
+
+            {/* ============ THEME AUDIT ============ */}
+            {latest && tab === "Theme Audit" && (
+              <>
+                <div className="g-sec-h"><h2>Theme audit</h2><p>How much your current theme is helping — or costing — your conversions.</p></div>
+                <div className="g-2col">
+                  <div className="g-card g-ads-ready">
+                    <div className="g-card-h"><h3>Current theme score</h3></div>
+                    <div className="g-ads-gauge"><Gauge value={themeScore} size={120} label="Theme score" /></div>
+                    <p className="g-dim center">{themeScore == null ? "Scan your store to score the theme." : themeScore >= 75 ? "Your theme covers most conversion essentials. Optimize content next." : `Your theme is missing key conversion elements — estimated impact ~${inr(Math.round((leak || 0) * 0.45 / 500) * 500)}/mo.`}</p>
+                    <CompareBar label="Theme conversion readiness" you={themeScore} them={88} themLabel="Digistick themes" />
+                  </div>
+                  <div className="g-card">
+                    <div className="g-card-h"><h3>Conversion blockers in your theme</h3><span className="g-chip">{themeBlockers.length} found</span></div>
+                    {themeBlockers.length === 0 && <p className="g-dim">No theme-level conversion blockers detected.</p>}
+                    {themeBlockers.map((c) => (
+                      <div className="g-row" key={c.label}><span className="g-blocker"><I n="x" size={12} /></span><div><b>{c.label}</b><span>{c.detail}</span></div><span className="g-task-rec">+{inr(perCheck[c.label])}<i>est/mo</i></span></div>
+                    ))}
+                  </div>
+                </div>
+                <div className="g-card-h free"><h3>Upgrade to a conversion-ready theme</h3><span className="g-chip warn">Rs 3,999 · launch price</span></div>
+                <div className="g-themes">
+                  {THEMES.map((t) => (
+                    <div className="g-card g-theme" key={t.id}>
+                      <div className={`g-theme-thumb ${t.cls}`}><span>{t.tag}</span><b>{t.name}</b></div>
+                      <div className="g-theme-body">
+                        <p>{t.desc}</p>
+                        <div className="g-theme-uplift"><I n="trend" size={13} /> {t.uplift}</div>
+                        <ul className="g-list sm">{t.features.map((f) => <li key={f}>{f}</li>)}</ul>
+                        <div className="g-app-actions">
+                          <a className="g-btn-ghost dark" href={t.preview} target="_blank" rel="noopener noreferrer">Preview</a>
+                          <button className="g-btn-primary sm" onClick={() => alert("Theme checkout is launching soon! Contact connect@digistick.in to get this theme at Rs 3,999 with setup.")}>Request setup</button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {/* ============ APP STACK ============ */}
+            {latest && tab === "App Stack" && (
+              <>
+                <div className="g-sec-h"><h2>App stack audit</h2><p>What your store already covers, and the apps that close the gaps found in your scan.</p></div>
+                <div className="g-card" style={{ marginBottom: 18 }}>
+                  <div className="g-card-h"><h3>Already covered</h3><span className="g-chip">{passed.filter((c) => c.cat === "cro").length} elements</span></div>
+                  <div className="g-passes">{passed.filter((c) => c.cat === "cro").map((c) => <span key={c.label}><I n="check" size={11} /> {c.label}</span>)}
+                  {passed.filter((c) => c.cat === "cro").length === 0 && <p className="g-dim">No conversion elements detected yet — the apps below are your starting stack.</p>}</div>
+                </div>
+                <div className="g-card-h free"><h3>Recommended for your gaps</h3></div>
+                <div className="g-apps">
+                  {apps.map((a) => (
+                    <div className="g-card g-app" key={a.name}>
+                      <div className="g-app-top"><span className="g-app-ic"><I n={a.ic} size={17} /></span><b>{a.name}</b><span className="g-app-impact">Impact {a.impact}/10</span></div>
+                      <p>{a.why}</p>
+                      <div className="g-app-meta"><span>Difficulty: <b>{a.diff}</b></span><span>Est. gain: <b>{a.gain}</b></span></div>
+                      <div className="g-app-actions">
+                        <a className="g-btn-ghost dark" href={a.link} target="_blank" rel="noopener noreferrer">Install app</a>
+                        <a className="g-btn-primary sm" href="https://digistick.in" target="_blank" rel="noopener noreferrer">Get Digistick to install</a>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </>
             )}
 
@@ -639,22 +709,23 @@ export default function Dashboard() {
                   <div className="g-card g-ads-ready">
                     <div className="g-card-h"><h3>Ad readiness score</h3></div>
                     <div className="g-ads-gauge"><Gauge value={adReadiness} size={120} /></div>
-                    <p className="g-dim center">{adReadiness >= 75 ? "Your store converts well enough to scale paid traffic profitably." : adReadiness >= 55 ? "Run small budgets while you close the CRO gaps — every fix lowers your CAC." : "Fix your leaks before spending — paid traffic to a leaking store burns money."}</p>
-                    <div className="g-budget">💰 Recommended starting budget <b>₹500/day</b></div>
+                    {adsRisk && <div className={`g-risk ${adsRisk.cls}`}><I n="alert" size={14} /> Ad spend risk: <b>{adsRisk.lvl}</b></div>}
+                    <p className="g-dim center">{adsRisk?.note}</p>
+                    <div className="g-budget"><I n="money" size={15} /> Recommended starting budget <b>₹500/day</b></div>
                   </div>
                   <div className="g-card">
                     <div className="g-card-h"><h3>Campaign structure</h3></div>
-                    {[["❄️ Cold campaign", "60% budget · broad + interest audiences", "Objective: purchases. Test 3 creatives, kill losers in 4 days."],
-                      ["🔁 Retargeting", "25% budget · site visitors & cart abandoners", "Urgency + social-proof angles. Your COD/return badges matter most here."],
-                      ["👯 Lookalike", "15% budget · 1–3% of purchasers", "Switch on only after 50+ purchases for a clean seed audience."]].map(([t, a, d]) => (
+                    {[["Cold campaign", "60% budget · broad + interest audiences", "Objective: purchases. Test 3 creatives, kill losers in 4 days."],
+                      ["Retargeting", "25% budget · site visitors & cart abandoners", "Urgency + social-proof angles. Your COD/return badges matter most here."],
+                      ["Lookalike", "15% budget · 1-3% of purchasers", "Switch on only after 50+ purchases for a clean seed audience."]].map(([t, a, d]) => (
                       <div className="g-row" key={t}><div><b>{t}</b><span>{a}</span><span className="g-dim">{d}</span></div></div>
                     ))}
                   </div>
                 </div>
                 <div className="g-cards3">
-                  <div className="g-card"><div className="g-card-h"><h3>🎯 Suggested audiences</h3></div><ul className="g-list"><li>Interest stacks around your niche + “online shopping”</li><li>Engaged Instagram shoppers, 24–44</li><li>Cart abandoners (7-day window)</li><li>Past buyers — for upsell campaigns</li></ul></div>
-                  <div className="g-card"><div className="g-card-h"><h3>🎬 Creative angles</h3></div><ul className="g-list"><li>Problem → product demo in first 3 seconds</li><li>UGC unboxing with COD trust callout</li><li>Founder story — why you built this</li><li>Before/after or social-proof compilation</li></ul></div>
-                  <div className="g-card"><div className="g-card-h"><h3>🪝 Video hooks</h3></div><ul className="g-list"><li>&quot;I stopped buying ___ from big brands because…&quot;</li><li>&quot;POV: your ___ finally arrives and it&apos;s actually good&quot;</li><li>&quot;3 signs you&apos;re overpaying for ___&quot;</li><li>&quot;Don&apos;t buy ___ before watching this&quot;</li></ul></div>
+                  <div className="g-card"><div className="g-card-h"><h3><I n="target" size={15} /> Suggested audiences</h3></div><ul className="g-list"><li>Interest stacks around your niche + online shopping</li><li>Engaged Instagram shoppers, 24-44</li><li>Cart abandoners (7-day window)</li><li>Past buyers — for upsell campaigns</li></ul></div>
+                  <div className="g-card"><div className="g-card-h"><h3><I n="image" size={15} /> Creative angles</h3></div><ul className="g-list"><li>Problem to product demo in first 3 seconds</li><li>UGC unboxing with COD trust callout</li><li>Founder story — why you built this</li><li>Before/after or social-proof compilation</li></ul></div>
+                  <div className="g-card"><div className="g-card-h"><h3><I n="zap" size={15} /> Video hooks</h3></div><ul className="g-list"><li>&quot;I stopped buying ___ from big brands because…&quot;</li><li>&quot;POV: your ___ finally arrives and it&apos;s actually good&quot;</li><li>&quot;3 signs you&apos;re overpaying for ___&quot;</li><li>&quot;Don&apos;t buy ___ before watching this&quot;</li></ul></div>
                 </div>
                 <div className="g-upsell"><div><b>Want ads run by professionals?</b><p>Digistick manages full-funnel Meta campaigns for D2C brands — creatives, audiences, scaling.</p></div><a className="g-btn-primary" href="https://digistick.in" target="_blank" rel="noopener noreferrer">Book a strategy call</a></div>
               </>
@@ -663,7 +734,7 @@ export default function Dashboard() {
             {/* ============ COMPETITORS ============ */}
             {tab === "Competitors" && (
               <>
-                <div className="g-sec-h"><h2>Competitor analysis</h2><p>Compare against any store, plus the industry average for D2C.</p></div>
+                <div className="g-sec-h"><h2>Competitor center</h2><p>Compare against any store, plus the industry average for D2C.</p></div>
                 <div className="g-card">
                   <div className="g-comp-input"><input value={compUrl} onChange={(e) => setCompUrl(e.target.value)} onKeyDown={(e) => e.key === "Enter" && runCompetitor()} placeholder="competitor.com" /><button className="g-btn-primary" onClick={runCompetitor} disabled={busy === "comp"}>{busy === "comp" ? "Scanning…" : "Compare"}</button></div>
                   {latest && (
@@ -671,6 +742,9 @@ export default function Dashboard() {
                       {[["Speed", "performance"], ["SEO", "seo"], ["Accessibility", "accessibility"], ["Best practices", "bestPractices"]].map(([lbl, key]) => (
                         <CompareBar key={key} label={lbl} you={latest.scores?.[key]} them={compData ? compData.scores?.[key] : INDUSTRY[key]} themLabel={compData ? hostOf(compData.url) : "Industry avg"} />
                       ))}
+                      <CompareBar label="Conversion readiness" you={conversion} them={compData ? Math.round(((compData.scores?.performance || 50) + (compData.scores?.bestPractices || 60)) / 2) : INDUSTRY.conversion} themLabel={compData ? hostOf(compData.url) : "Industry avg"} />
+                      <CompareBar label="Mobile UX" you={mobile} them={compData ? Math.max(5, Math.round((compData.scores?.performance || 50) * 0.9 + (compData.scores?.bestPractices || 60) * 0.1)) : INDUSTRY.mobile} themLabel={compData ? hostOf(compData.url) : "Industry avg"} />
+                      <CompareBar label="Trust score" you={conf.score} them={compData ? 65 : 65} themLabel={compData ? hostOf(compData.url) + " (est.)" : "Industry avg"} />
                     </div>
                   )}
                   {!latest && <p className="g-dim">Scan your store first to enable comparison.</p>}
@@ -678,51 +752,17 @@ export default function Dashboard() {
               </>
             )}
 
-            {/* ============ RECOMMENDATIONS ============ */}
-            {latest && tab === "Recommendations" && (
+            {/* ============ SERVICES ============ */}
+            {tab === "Services" && (
               <>
-                <div className="g-sec-h"><h2>Recommendations</h2><p>Apps, themes and services matched to the issues found on {hostOf(activeSite.url)}.</p></div>
-
-                <div className="g-card-h free"><h3>🧩 Shopify apps for your gaps</h3></div>
-                <div className="g-apps">
-                  {apps.map((a) => (
-                    <div className="g-card g-app" key={a.name}>
-                      <div className="g-app-top"><span className="g-app-ic">{a.ic}</span><b>{a.name}</b><span className="g-app-impact">Impact {a.impact}/10</span></div>
-                      <p>{a.why}</p>
-                      <div className="g-app-meta"><span>Difficulty: <b>{a.diff}</b></span><span>Est. gain: <b>{a.gain}</b></span></div>
-                      <div className="g-app-actions">
-                        <a className="g-btn-ghost dark" href={a.link} target="_blank" rel="noopener noreferrer">Install app</a>
-                        <a className="g-btn-primary sm" href="https://digistick.in" target="_blank" rel="noopener noreferrer">Get Digistick to install</a>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="g-card-h free" style={{ marginTop: 26 }}><h3>🎨 Theme recommendation engine</h3><span className="g-chip warn">₹3,999 · launch price</span></div>
-                <div className="g-themes">
-                  {THEMES.map((t) => (
-                    <div className="g-card g-theme" key={t.id}>
-                      <div className={`g-theme-thumb ${t.cls}`}><span>{t.tag}</span><b>{t.name}</b></div>
-                      <div className="g-theme-body">
-                        <p>{t.desc}</p>
-                        <div className="g-theme-uplift">📈 {t.uplift}</div>
-                        <ul className="g-list sm">{t.features.map((f) => <li key={f}>{f}</li>)}</ul>
-                        <div className="g-app-actions">
-                          <a className="g-btn-ghost dark" href={t.preview} target="_blank" rel="noopener noreferrer">Preview</a>
-                          <button className="g-btn-primary sm" onClick={() => alert("Theme checkout is launching soon! Contact connect@digistick.in to get this theme at ₹3,999 with setup.")}>Request setup</button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="g-card-h free" style={{ marginTop: 26 }}><h3>🏆 Done-for-you by Digistick</h3></div>
+                <div className="g-sec-h"><h2>Digistick services</h2><p>Done-for-you growth — recommended dynamically from your scan findings.</p></div>
                 <div className="g-services">
                   {SERVICES.map((s) => (
-                    <div className={`g-card g-service ${s.cls}`} key={s.name}>
-                      <span className="g-sv-ic">{s.ic}</span>
+                    <div className={`g-card g-service ${s.cls} ${recommendedService === s.key ? "rec" : ""}`} key={s.name}>
+                      {recommendedService === s.key && <span className="g-sv-rec">Recommended for you</span>}
+                      <span className="g-sv-ic"><I n={s.ic} size={17} /></span>
                       <b>{s.name}</b><p>{s.desc}</p>
-                      <div className="g-sv-foot"><span>{s.price}</span><a href="https://digistick.in" target="_blank" rel="noopener noreferrer">Book →</a></div>
+                      <div className="g-sv-foot"><span>{s.price}</span><a href="https://digistick.in" target="_blank" rel="noopener noreferrer">Book <I n="arrowRight" size={12} /></a></div>
                     </div>
                   ))}
                 </div>
@@ -737,45 +777,26 @@ export default function Dashboard() {
                 {inbox.map((m) => (
                   <div className={`g-card g-inbox ${!m.read_at ? "unread" : ""}`} key={m.id}>
                     <div className="g-inbox-top">
-                      <span className="g-inbox-kind">{m.kind === "offer" ? "💰 Offer" : m.kind === "recommendation" ? "✨ Recommendation" : "📝 Note"}</span>
+                      <span className="g-inbox-kind">{m.kind === "offer" ? "Offer" : m.kind === "recommendation" ? "Recommendation" : "Note"}</span>
                       <span className="g-dim">{new Date(m.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}</span>
                     </div>
                     <b>{m.title}</b>
                     <p>{m.body}</p>
-                    <a className="g-link" href="https://digistick.in" target="_blank" rel="noopener noreferrer">Reply / book a call →</a>
+                    <a className="g-link" href="https://digistick.in" target="_blank" rel="noopener noreferrer">Reply / book a call <I n="arrowRight" size={13} /></a>
                   </div>
                 ))}
               </>
             )}
 
-            {/* ============ MESSAGES ============ */}
-            {tab === "Messages" && (
-              <>
-                <div className="g-sec-h"><h2>Messages from Digistick</h2><p>Recommendations and offers from our team, based on your store&apos;s data.</p></div>
-                {inbox.length === 0 && <div className="g-empty"><h3>No messages yet</h3><p>When the Digistick team has a recommendation for your store, it appears here.</p></div>}
-                {inbox.map((m) => (
-                  <div className={`g-card g-inbox ${!m.read_at ? "unread" : ""}`} key={m.id}>
-                    <div className="g-inbox-top">
-                      <span className="g-inbox-kind">{m.kind === "offer" ? "\ud83d\udcb0 Offer" : m.kind === "recommendation" ? "\u2728 Recommendation" : "\ud83d\udcdd Note"}</span>
-                      <span className="g-dim">{new Date(m.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}</span>
-                    </div>
-                    <b>{m.title}</b>
-                    <p>{m.body}</p>
-                    <a className="g-link" href="https://digistick.in" target="_blank" rel="noopener noreferrer">Reply / book a call \u2192</a>
-                  </div>
-                ))}
-              </>
-            )}
-
-            {/* ============ FIX KIT ============ */}
-            {tab === "Fix Kit" && (
+            {/* ============ GROWTH PLAN ============ */}
+            {tab === "Growth Plan" && (
               <>
                 <div className="g-sec-h"><h2>Your Growth Plan</h2><p>Reports & fix-kits you&apos;ve purchased for this store.</p></div>
                 {siteReports.length === 0 ? (
                   isPro ? <div className="g-empty sm"><p>Your purchased fix-kit will appear here.</p></div>
-                    : <div className="g-upsell"><div><b>No Growth Plan yet.</b><p>Unlock the ₹799 plan to get written fixes, a growth blueprint, and copy-paste snippets saved to your account.</p></div><button className="g-btn-primary" onClick={() => unlockPro(activeSite.url)}>Get the Growth Plan — ₹799</button></div>
+                    : <div className="g-upsell"><div><b>No Growth Plan yet.</b><p>Unlock the Rs 799 plan to get written fixes, a growth blueprint, and copy-paste snippets saved to your account.</p></div><button className="g-btn-primary" onClick={() => unlockPro(activeSite.url)}>Get the Growth Plan — ₹799</button></div>
                 ) : siteReports.map((r) => (
-                  <div className="g-card g-kit" key={r.id}><div><b>Growth Plan (fix-kit)</b><span>{new Date(r.created_at).toLocaleDateString("en-IN")}</span></div><a className="g-btn-primary sm" href={"/?audit=" + encodeURIComponent(activeSite.url)}>Open →</a></div>
+                  <div className="g-card g-kit" key={r.id}><div><b>Growth Plan (fix-kit)</b><span>{new Date(r.created_at).toLocaleDateString("en-IN")}</span></div><a className="g-btn-primary sm" href={"/?audit=" + encodeURIComponent(activeSite.url)}>Open <I n="arrowRight" size={12} /></a></div>
                 ))}
               </>
             )}
@@ -793,7 +814,7 @@ export default function Dashboard() {
                       ))}
                     </div>
                   </div>
-                ) : <div className="g-upsell"><div><b>Score history is a Pro feature.</b><p>Unlock the ₹799 Growth Plan to track your scores over time.</p></div><button className="g-btn-primary" onClick={() => unlockPro(activeSite.url)}>Unlock Pro — ₹799</button></div>}
+                ) : <div className="g-upsell"><div><b>Score history is a Pro feature.</b><p>Unlock the Rs 799 Growth Plan to track your scores over time.</p></div><button className="g-btn-primary" onClick={() => unlockPro(activeSite.url)}>Unlock Pro — ₹799</button></div>}
               </>
             )}
 
@@ -816,18 +837,16 @@ export default function Dashboard() {
         )}
       </main>
 
-      {/* AI Growth Consultant — floating */}
       {activeSite && latest && (
         <>
-          <button className={`ai-fab ${aiOpen ? "open" : ""}`} onClick={() => setAiOpen((o) => !o)} aria-label="AI Growth Consultant">{aiOpen ? "✕" : "🤖"}</button>
-          <Consultant open={aiOpen} onClose={() => setAiOpen(false)} isPro={isPro} context={chatContext} onUpgrade={() => { setAiOpen(false); unlockPro(activeSite.url); }} />
+          <button className={`ai-fab ${aiOpen ? "open" : ""}`} onClick={() => setAiOpen((o) => !o)} aria-label="AI Growth Consultant"><I n={aiOpen ? "x" : "bot"} size={22} /></button>
+          <Consultant open={aiOpen} onClose={() => setAiOpen(false)} isPro={isPro} context={chatContext} onUpgrade={() => { setAiOpen(false); unlockPro(activeSite.url); }} ask={aiAsk} onAsked={() => setAiAsk("")} />
         </>
       )}
 
-      {/* Mobile bottom nav */}
       <nav className="g-bottom">
         {MOBILE_NAV.map(([t, ic, lbl]) => (
-          <button key={t} className={tab === t ? "on" : ""} onClick={() => go(t)}><span>{ic}</span>{lbl}</button>
+          <button key={t} className={tab === t ? "on" : ""} onClick={() => go(t)}><span><I n={ic} size={18} /></span>{lbl}</button>
         ))}
       </nav>
     </div>
