@@ -1412,3 +1412,67 @@ body { background: var(--cream); color: var(--ink); font-family: var(--font); -w
   .g-site-add input { width: 104px; }
   .g-acct { font-size: 10.5px; }
 }
+
+/* ================================================================
+   ADMIN BACK OFFICE + client inbox
+   ================================================================ */
+.adm { display: block; }
+.adm-main { max-width: 1240px; margin: 0 auto; padding: 24px 28px 60px; }
+.adm-top { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 22px; flex-wrap: wrap; }
+.adm-top-r { display: flex; align-items: center; gap: 10px; }
+.adm-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+.adm-stat { text-align: left; }
+.adm-stat-ic { font-size: 20px; }
+.adm-stat-v { font-size: 30px; font-weight: 900; letter-spacing: -.02em; margin-top: 8px; }
+.adm-stat-l { font-size: 12.5px; font-weight: 700; margin-top: 2px; }
+.adm-stat-sub { font-size: 11px; color: var(--g-muted); margin-top: 4px; }
+.adm-search { margin-left: auto; border: 1px solid var(--g-line); border-radius: 12px; font-family: var(--font); font-size: 13px; padding: 9px 14px; width: 220px; outline: none; }
+.adm-stage-filter { border: 1px solid var(--g-line); border-radius: 12px; font-family: var(--font); font-size: 12.5px; padding: 9px 10px; }
+.adm-table { overflow-x: auto; }
+.adm-tr { display: grid; grid-template-columns: 1.5fr 1.3fr .5fr .5fr .9fr .7fr 1fr; gap: 12px; align-items: center; padding: 12px 8px; border-bottom: 1px solid var(--g-bg); font-size: 13px; min-width: 880px; }
+.adm-tr.head { font-size: 10.5px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--g-muted); border-bottom: 1px solid var(--g-line); }
+.adm-email { font-weight: 700; overflow: hidden; text-overflow: ellipsis; }
+.adm-email i { display: block; font-style: normal; font-size: 10.5px; color: var(--g-muted); font-weight: 600; }
+.adm-sites { display: flex; flex-wrap: wrap; gap: 5px; }
+.adm-sites em { font-style: normal; font-size: 11px; font-weight: 600; background: var(--g-bg); border-radius: 20px; padding: 3px 10px; }
+.adm-pro { font-size: 9px; font-weight: 800; letter-spacing: 1px; background: var(--g-success); color: #fff; border-radius: 20px; padding: 3px 9px; }
+.adm-stage { border: 1px solid var(--g-line); border-radius: 10px; font-family: var(--font); font-size: 12px; font-weight: 600; padding: 7px 8px; background: #fff; cursor: pointer; }
+.adm-actions { display: flex; gap: 7px; justify-content: flex-end; }
+.g-btn-ghost.dark.sm2 { padding: 9px 14px; font-size: 12px; flex: none; }
+.adm-overlay { position: fixed; inset: 0; background: rgba(21,32,58,.45); z-index: 80; display: flex; justify-content: flex-end; }
+.adm-drawer { width: 480px; max-width: 92vw; background: var(--g-card); height: 100%; overflow-y: auto; padding: 24px; box-shadow: -16px 0 50px rgba(21,32,58,.25); animation: slidein .25s ease; }
+@keyframes slidein { from { transform: translateX(40px); opacity: 0; } to { transform: none; opacity: 1; } }
+.adm-d-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.adm-d-head h3 { font-size: 17px; font-weight: 800; word-break: break-all; }
+.ai-x.dark { color: var(--g-muted); font-size: 16px; }
+.adm-d-sec { font-size: 10.5px; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; color: var(--g-muted); margin: 18px 0 10px; }
+.adm-site { background: var(--g-bg); border-radius: 16px; padding: 14px 16px; margin-bottom: 10px; }
+.adm-site-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.adm-site-top > b:first-child { font-size: 13.5px; flex: 1; min-width: 120px; }
+.adm-site-score { font-size: 17px; }
+.adm-site-meta { font-size: 11px; color: var(--g-muted); margin: 7px 0; }
+.adm-issue { font-size: 11.5px; font-weight: 600; color: var(--g-danger); padding: 2px 0; }
+.adm-msg { border: 1px solid var(--g-line); border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; }
+.adm-msg-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 5px; }
+.adm-msg-top b { font-size: 13px; }
+.adm-msg p { font-size: 12px; color: var(--g-muted); line-height: 1.55; white-space: pre-wrap; }
+.adm-compose { margin: auto; width: 520px; max-width: 92vw; background: var(--g-card); border-radius: 22px; padding: 24px; box-shadow: 0 30px 80px rgba(21,32,58,.35); display: flex; flex-direction: column; gap: 12px; }
+.adm-overlay:has(.adm-compose) { justify-content: center; align-items: center; }
+.adm-c-row { display: flex; gap: 10px; }
+.adm-c-row select { flex: 1; border: 1px solid var(--g-line); border-radius: 12px; font-family: var(--font); font-size: 13px; padding: 10px 12px; }
+.adm-c-title { border: 1px solid var(--g-line); border-radius: 12px; font-family: var(--font); font-size: 14px; font-weight: 600; padding: 12px 14px; outline: none; }
+.adm-c-body { border: 1px solid var(--g-line); border-radius: 12px; font-family: var(--font); font-size: 13px; padding: 12px 14px; outline: none; resize: vertical; line-height: 1.6; }
+
+/* Client inbox (Messages tab) */
+.g-inbox { margin-bottom: 12px; position: relative; }
+.g-inbox.unread { border-left: 4px solid var(--g-secondary); }
+.g-inbox-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 8px; }
+.g-inbox-kind { font-size: 10.5px; font-weight: 800; letter-spacing: 1px; background: #e8f0ff; color: var(--g-primary); border-radius: 20px; padding: 4px 12px; }
+.g-inbox b { font-size: 15px; }
+.g-inbox p { font-size: 13px; color: var(--g-muted); line-height: 1.6; margin-top: 6px; white-space: pre-wrap; }
+
+@media (max-width: 880px) {
+  .adm-stats { grid-template-columns: 1fr 1fr; }
+  .adm-search { width: 100%; margin-left: 0; }
+  .adm-main { padding: 16px 14px 50px; }
+}

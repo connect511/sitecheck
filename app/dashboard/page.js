@@ -7,7 +7,7 @@ import AuthModal from "../AuthModal";
 /* ============ Navigation ============ */
 const NAV = [
   ["Dashboard", "▦"], ["Growth Opportunities", "🚀"], ["Revenue Leaks", "💸"], ["Ads Strategy", "📣"],
-  ["Competitors", "⚔"], ["Recommendations", "✨"], ["Fix Kit", "🎁"], ["History", "📈"], ["Settings", "⚙"],
+  ["Competitors", "⚔"], ["Recommendations", "✨"], ["Messages", "💬"], ["Fix Kit", "🎁"], ["History", "📈"], ["Settings", "⚙"],
 ];
 const MOBILE_NAV = [["Dashboard", "🏠", "Home"], ["Revenue Leaks", "🚀", "Growth"], ["Ads Strategy", "📣", "Ads"], ["Recommendations", "🧰", "Tools"], ["Settings", "👤", "Profile"]];
 
@@ -218,7 +218,27 @@ export default function Dashboard() {
   const [launchLeft, setLaunchLeft] = useState("48:00:00");
   const [aiOpen, setAiOpen] = useState(false);
   const [done, setDone] = useState({}); // action-plan checkmarks, persisted per site
+  const [inbox, setInbox] = useState([]); // messages pushed by Digistick admins
   const configured = supabaseConfigured();
+
+  // Load admin messages — RLS lets each user read only their own.
+  const loadInbox = useCallback(async () => {
+    const sb = getSupabase(); if (!sb) return;
+    const { data } = await sb.from("admin_messages").select("*").order("created_at", { ascending: false });
+    if (data) setInbox(data);
+  }, []);
+
+  // Opening the Messages tab marks unread items as read.
+  useEffect(() => {
+    if (tab !== "Messages") return;
+    const unread = inbox.filter((m) => !m.read_at);
+    if (!unread.length) return;
+    const sb = getSupabase(); if (!sb) return;
+    const now = new Date().toISOString();
+    sb.from("admin_messages").update({ read_at: now }).is("read_at", null).then(() => {
+      setInbox((ms) => ms.map((m) => m.read_at ? m : { ...m, read_at: now }));
+    });
+  }, [tab, inbox]);
 
   // Launch discount countdown — 7 days from first visit (stored per browser so it's consistent, not fake-resetting)
   useEffect(() => {
@@ -278,8 +298,8 @@ export default function Dashboard() {
   useEffect(() => {
     if (!configured) { setLoading(false); return; }
     const sb = getSupabase();
-    sb.auth.getUser().then(({ data }) => { setUser(data?.user || null); setLoading(false); if (data?.user) loadDataDeduped(); });
-    const { data: sub } = sb.auth.onAuthStateChange((_e, session) => { setUser(session?.user || null); if (session?.user) loadDataDeduped(); });
+    sb.auth.getUser().then(({ data }) => { setUser(data?.user || null); setLoading(false); if (data?.user) { loadDataDeduped(); loadInbox(); } });
+    const { data: sub } = sb.auth.onAuthStateChange((_e, session) => { setUser(session?.user || null); if (session?.user) { loadDataDeduped(); loadInbox(); } });
     return () => sub?.subscription?.unsubscribe();
   }, [configured]); // eslint-disable-line
 
@@ -441,10 +461,11 @@ export default function Dashboard() {
             <button key={t} className={`g-nav-item ${tab === t ? "on" : ""}`} onClick={() => go(t)}>
               <span className="gni-ic">{ic}</span>{t}
               {t === "Revenue Leaks" && failed.length > 0 && <span className="gni-badge">{failed.length}</span>}
+              {t === "Messages" && inbox.filter((m) => !m.read_at).length > 0 && <span className="gni-badge">{inbox.filter((m) => !m.read_at).length}</span>}
+              {t === "Messages" && inbox.filter((m) => !m.read_at).length > 0 && <span className="gni-badge">{inbox.filter((m) => !m.read_at).length}</span>}
               {["History", "Settings"].includes(t) && !isPro && <span className="gni-lock">🔒</span>}
             </button>
           ))}
-          <div className="g-nav-item soon"><span className="gni-ic">💬</span>Messages<span className="gni-soon">Soon</span></div>
         </nav>
         <div className="g-side-foot">
           {activeSite && !isPro && (
@@ -705,6 +726,44 @@ export default function Dashboard() {
                     </div>
                   ))}
                 </div>
+              </>
+            )}
+
+            {/* ============ MESSAGES ============ */}
+            {tab === "Messages" && (
+              <>
+                <div className="g-sec-h"><h2>Messages from Digistick</h2><p>Recommendations and offers from our team, based on your store&apos;s data.</p></div>
+                {inbox.length === 0 && <div className="g-empty"><h3>No messages yet</h3><p>When the Digistick team has a recommendation for your store, it appears here.</p></div>}
+                {inbox.map((m) => (
+                  <div className={`g-card g-inbox ${!m.read_at ? "unread" : ""}`} key={m.id}>
+                    <div className="g-inbox-top">
+                      <span className="g-inbox-kind">{m.kind === "offer" ? "💰 Offer" : m.kind === "recommendation" ? "✨ Recommendation" : "📝 Note"}</span>
+                      <span className="g-dim">{new Date(m.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}</span>
+                    </div>
+                    <b>{m.title}</b>
+                    <p>{m.body}</p>
+                    <a className="g-link" href="https://digistick.in" target="_blank" rel="noopener noreferrer">Reply / book a call →</a>
+                  </div>
+                ))}
+              </>
+            )}
+
+            {/* ============ MESSAGES ============ */}
+            {tab === "Messages" && (
+              <>
+                <div className="g-sec-h"><h2>Messages from Digistick</h2><p>Recommendations and offers from our team, based on your store&apos;s data.</p></div>
+                {inbox.length === 0 && <div className="g-empty"><h3>No messages yet</h3><p>When the Digistick team has a recommendation for your store, it appears here.</p></div>}
+                {inbox.map((m) => (
+                  <div className={`g-card g-inbox ${!m.read_at ? "unread" : ""}`} key={m.id}>
+                    <div className="g-inbox-top">
+                      <span className="g-inbox-kind">{m.kind === "offer" ? "\ud83d\udcb0 Offer" : m.kind === "recommendation" ? "\u2728 Recommendation" : "\ud83d\udcdd Note"}</span>
+                      <span className="g-dim">{new Date(m.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}</span>
+                    </div>
+                    <b>{m.title}</b>
+                    <p>{m.body}</p>
+                    <a className="g-link" href="https://digistick.in" target="_blank" rel="noopener noreferrer">Reply / book a call \u2192</a>
+                  </div>
+                ))}
               </>
             )}
 
