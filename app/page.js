@@ -67,6 +67,116 @@ function SessionTimer() {
   return <span className="timer-num">{mm}:{ss}</span>;
 }
 
+/* ============ Landing v2 helpers ============ */
+function useInView(threshold = 0.22) {
+  const ref = useRef(null);
+  const [vis, setVis] = useState(false);
+  useEffect(() => {
+    const el = ref.current; if (!el) return;
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setVis(true); io.disconnect(); } }, { threshold });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [threshold]);
+  return [ref, vis];
+}
+
+function Reveal({ children, delay = 0, className = "" }) {
+  const [ref, vis] = useInView();
+  return <div ref={ref} className={`rv ${vis ? "in" : ""} ${className}`} style={{ transitionDelay: delay + "ms" }}>{children}</div>;
+}
+
+function StatBlob({ value, prefix = "", suffix = "", label, cls, delay = 0 }) {
+  const [ref, vis] = useInView(0.4);
+  const n = useCountUp(value, vis, 1200);
+  return (
+    <div ref={ref} className={`blob ${cls} rv ${vis ? "in" : ""}`} style={{ transitionDelay: delay + "ms" }}>
+      <div className="blob-num">{prefix}{n}{suffix}</div>
+      <div className="blob-label">{label}</div>
+    </div>
+  );
+}
+
+function MiniRing({ n, v, c, run }) {
+  const r = 19, cir = 2 * Math.PI * r;
+  const shown = useCountUp(v, run, 900);
+  return (
+    <div className="mini-ring">
+      <svg width="50" height="50" viewBox="0 0 50 50">
+        <circle cx="25" cy="25" r={r} fill="none" stroke="var(--line)" strokeWidth="5" />
+        <circle cx="25" cy="25" r={r} fill="none" stroke={c} strokeWidth="5" strokeLinecap="round"
+          strokeDasharray={cir} strokeDashoffset={run ? cir * (1 - v / 100) : cir} style={{ transition: "stroke-dashoffset .9s ease" }} />
+      </svg>
+      <div className="mr-val" style={{ color: c }}>{shown}</div>
+      <div className="mr-name">{n}</div>
+    </div>
+  );
+}
+
+const DEMO_ISSUES = ["Missing meta description", "No urgency or trust cues", "LCP 4.2s — slow on mobile"];
+const DEMO_PHASE_MS = [1400, 1800, 2200, 2400, 3200];
+function DemoCard() {
+  const [phase, setPhase] = useState(0);
+  const [ref, vis] = useInView(0.3);
+  useEffect(() => {
+    if (!vis) return;
+    const t = setTimeout(() => setPhase((p) => (p + 1) % 5), DEMO_PHASE_MS[phase]);
+    return () => clearTimeout(t);
+  }, [phase, vis]);
+  const scores = [
+    { n: "Perf", v: 42, c: "var(--bad)" },
+    { n: "SEO", v: 88, c: "var(--good)" },
+    { n: "A11y", v: 71, c: "var(--warn)" },
+    { n: "BP", v: 95, c: "var(--good)" },
+  ];
+  return (
+    <div className="demo" ref={ref}>
+      <div className="demo-chrome">
+        <span className="dot dr" /><span className="dot dy" /><span className="dot dg" />
+        <span className={`demo-url ${phase === 0 ? "typing" : ""}`}>demo-store.in</span>
+        <span className="demo-live">● LIVE DEMO</span>
+      </div>
+      <div className="demo-body">
+        {phase === 0 && <div className="demo-hint">Paste a URL. That&apos;s the whole job.</div>}
+        {phase === 1 && (<div className="demo-scan"><div className="demo-scanline" /><span>Running 20+ checks…</span></div>)}
+        {phase >= 2 && <div className="demo-scores">{scores.map((s) => <MiniRing key={s.n} {...s} run={phase >= 2} />)}</div>}
+        {phase >= 3 && (
+          <div className="demo-issues">
+            {DEMO_ISSUES.map((t, i) => <div className="demo-chip" key={t} style={{ animationDelay: i * 150 + "ms" }}>✕ {t}</div>)}
+          </div>
+        )}
+        {phase >= 4 && <div className="demo-leak">Estimated leak: <b>₹38,500/mo</b> <span>→ fixable</span></div>}
+      </div>
+    </div>
+  );
+}
+
+const MARQUEE_ITEMS = ["Title tag", "Meta description", "H1 structure", "Alt text", "Canonical", "Schema", "Open Graph", "LCP", "CLS", "TBT", "Trust badges", "Urgency cues", "Reviews", "COD badges", "Returns policy", "Mobile speed", "Viewport", "Content depth"];
+function Marquee() {
+  const items = [...MARQUEE_ITEMS, ...MARQUEE_ITEMS];
+  return (
+    <div className="marquee" aria-hidden="true">
+      <div className="marquee-track">{items.map((t, i) => <span key={i}>{t}<i>✦</i></span>)}</div>
+    </div>
+  );
+}
+
+function FaqItem({ q, a }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className={`faq-item ${open ? "open" : ""}`} onClick={() => setOpen((o) => !o)} role="button" tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen((o) => !o); } }}>
+      <div className="faq-q">{q}<span className="faq-plus">+</span></div>
+      <div className="faq-a-wrap"><div className="faq-a">{a}</div></div>
+    </div>
+  );
+}
+
+function scrollToScan() {
+  const el = document.getElementById("scan-input");
+  el?.scrollIntoView({ behavior: "smooth", block: "center" });
+  setTimeout(() => el?.focus(), 500);
+}
+
 /* Honest revenue-leak estimate from the actual scan — scaled, varied per store */
 function computeLeak(data) {
   if (!data) return null;
@@ -405,19 +515,27 @@ export default function Home() {
       </div>
 
       <section className="hero">
+        <div className="hero-orbit" aria-hidden="true">
+          <svg className="orbit-lines" viewBox="0 0 1080 540" preserveAspectRatio="xMidYMid slice">
+            <path className="dash" d="M165 145 C 290 200, 400 250, 540 330" />
+            <path className="dash" d="M915 135 C 800 195, 690 255, 540 330" />
+            <path className="dash" d="M120 365 C 270 365, 400 345, 540 338" />
+            <path className="dash" d="M960 380 C 820 380, 690 350, 540 338" />
+          </svg>
+          <div className="badge b1"><span className="b-ic ic-red">⚡</span><span><b>Perf 38</b><i>LCP 4.2s</i></span></div>
+          <div className="badge b2"><span className="b-ic ic-blue">🔍</span><span><b>SEO 92</b><i>2 quick fixes</i></span></div>
+          <div className="badge b3"><span className="b-ic ic-yellow">🛒</span><span><b>CRO audit</b><i>6 gaps found</i></span></div>
+          <div className="badge b4"><span className="b-ic ic-green">♿</span><span><b>A11y 71</b><i>contrast issues</i></span></div>
+        </div>
         <span className="hero-pill">Free Website Audit Tool</span>
-        <h1>Your store is<br />leaking <span className="y">sales</span>.<br />Find out <span className="r">where</span>.</h1>
+        <h1>Your store is<br /><span className="hl hl-y">leaking sales.</span><br />Find out <span className="hl hl-r">where.</span></h1>
         <p className="hero-p">Paste your URL and get an instant diagnostic across speed, SEO, accessibility, and conversion — then unlock a copy-paste fix-kit built to turn visitors into buyers.</p>
         <div className="bar">
-          <input value={url} onChange={(e) => setUrl(e.target.value)} onKeyDown={(e) => e.key === "Enter" && runAudit()} placeholder="yourstore.com" spellCheck={false} />
+          <input id="scan-input" value={url} onChange={(e) => setUrl(e.target.value)} onKeyDown={(e) => e.key === "Enter" && runAudit()} placeholder="yourstore.com" spellCheck={false} />
           <button onClick={runAudit} disabled={loading}>{loading ? "Scanning…" : "Scan free"}</button>
         </div>
         {error && !data && <div className="err" style={{ marginTop: 16 }}>{error}</div>}
-        <div className="hero-stats">
-          <div><div className="stat-num">30s</div><div className="stat-label">Instant scan</div></div>
-          <div><div className="stat-num">20+</div><div className="stat-label">Checks run</div></div>
-          <div><div className="stat-num">₹799</div><div className="stat-label">Full fix-kit</div></div>
-        </div>
+        <div className="hero-trust">No signup to scan · <b>30 seconds</b> · <b>20+ checks</b> · no card needed</div>
       </section>
 
       <section className="sec tool" id="tool">
@@ -740,57 +858,124 @@ export default function Home() {
       </section>
 
       {!showResults && (<>
-      <section className="sec" style={{ background: "#fff" }}>
-        <div className="sec-inner center">
-          <span className="tag tag-blue">What we scan</span>
-          <h2 className="sec-title">One scan. <span className="blue">Four angles.</span></h2>
-          <p className="sec-sub">Most tools check one thing. SiteCheck looks at everything that actually moves revenue.</p>
-          <div className="grid2">
-            <div className="card"><div className="icon-box ib-blue">⚡</div><h3>Speed &amp; Performance</h3><p>Google Lighthouse scoring + Core Web Vitals. Slow stores lose buyers — we show you exactly how fast yours really loads on mobile.</p></div>
-            <div className="card"><div className="icon-box ib-yellow">🔍</div><h3>SEO &amp; Technical</h3><p>Title, meta, headings, alt text, canonical, schema, Open Graph. The on-page signals that decide whether Google and shoppers find you.</p></div>
-            <div className="card"><div className="icon-box ib-red">♿</div><h3>Accessibility</h3><p>Catches issues that block real users — and quietly drag down your rankings and conversions.</p></div>
-            <div className="card"><div className="icon-box ib-orange">🛒</div><h3>Conversion &amp; UX</h3><p>An AI read of how your page sells: trust, clarity, friction, and the missing elements costing you orders.</p></div>
+      <div className="scallop" aria-hidden="true" />
+      <Marquee />
+
+      <section className="sec lp-white">
+        <div className="sec-inner">
+          <div className="center">
+            <Reveal><span className="tag tag-blue">Why stores use it</span>
+            <h2 className="sec-title">Numbers that <span className="blue">move</span> revenue.</h2>
+            <p className="sec-sub">A real Lighthouse render plus a live parse of your page — watched from the buyer&apos;s side of the screen.</p></Reveal>
+          </div>
+          <div className="lp-split">
+            <div className="lp-blobs">
+              <StatBlob value={30} suffix="s" label="Instant live scan" cls="blob-blue" />
+              <StatBlob value={20} suffix="+" label="Checks per scan" cls="blob-yellow" delay={120} />
+              <StatBlob value={4} label="Revenue angles" cls="blob-red" delay={240} />
+              <StatBlob value={799} prefix="₹" label="Full fix-kit" cls="blob-ink" delay={360} />
+            </div>
+            <Reveal delay={150}><DemoCard /></Reveal>
           </div>
         </div>
       </section>
 
       <section className="sec">
         <div className="sec-inner center">
-          <span className="tag tag-red">How it works</span>
-          <h2 className="sec-title">From URL to <span className="red">fixes</span> in 3 steps</h2>
-          <div className="steps">
-            <div className="step"><div className="step-num">1</div><h3>Paste your link</h3><p>Drop any store or website URL. No signup, no card. We scan it live in about 30 seconds.</p></div>
-            <div className="step"><div className="step-num">2</div><h3>See what's leaking</h3><p>Get real scores and a checklist of issues — speed, SEO, broken trust signals, missing conversion elements.</p></div>
-            <div className="step"><div className="step-num">3</div><h3>Unlock the fix-kit</h3><p>For ₹799, get your fixes written for you, an install-ready file, a 14-day plan, and copy-paste CRO code.</p></div>
+          <Reveal><span className="tag tag-blue">What we scan</span>
+          <h2 className="sec-title">One scan. <span className="blue">Four angles.</span></h2>
+          <p className="sec-sub">Most tools check one thing. SiteCheck looks at everything that actually moves revenue.</p></Reveal>
+          <div className="grid2">
+            <Reveal><div className="card"><div className="icon-box ib-blue">⚡</div><h3>Speed &amp; Performance</h3><p>Google Lighthouse scoring + Core Web Vitals. Slow stores lose buyers — we show you exactly how fast yours really loads on mobile.</p><div className="card-chips"><span className="card-chip">LCP</span><span className="card-chip">CLS</span><span className="card-chip">TBT</span><span className="card-chip">Speed Index</span></div></div></Reveal>
+            <Reveal delay={100}><div className="card"><div className="icon-box ib-yellow">🔍</div><h3>SEO &amp; Technical</h3><p>Title, meta, headings, alt text, canonical, schema, Open Graph. The on-page signals that decide whether Google and shoppers find you.</p><div className="card-chips"><span className="card-chip">Title</span><span className="card-chip">Meta</span><span className="card-chip">Schema</span><span className="card-chip">OG tags</span></div></div></Reveal>
+            <Reveal delay={150}><div className="card"><div className="icon-box ib-red">♿</div><h3>Accessibility</h3><p>Catches issues that block real users — and quietly drag down your rankings and conversions.</p><div className="card-chips"><span className="card-chip">Contrast</span><span className="card-chip">Alt text</span><span className="card-chip">Labels</span></div></div></Reveal>
+            <Reveal delay={200}><div className="card"><div className="icon-box ib-orange">🛒</div><h3>Conversion &amp; UX</h3><p>An AI read of how your page sells: trust, clarity, friction, and the missing elements costing you orders.</p><div className="card-chips"><span className="card-chip">Trust</span><span className="card-chip">Urgency</span><span className="card-chip">Reviews</span><span className="card-chip">COD</span></div></div></Reveal>
           </div>
         </div>
       </section>
 
-      <section className="sec" style={{ background: "#fff" }}>
+      <section className="sec lp-white">
         <div className="sec-inner center">
-          <span className="tag tag-dark">Loved by founders</span>
-          <h2 className="sec-title">Real stores. <span className="blue">Real lifts.</span></h2>
-          <div className="testi-grid">
-            <div className="testi"><div className="testi-stars">★★★★★</div><p className="testi-text">"Ran my Shopify store through it and pasted in the urgency + COD badges. Add-to-carts jumped within a week. Best ₹799 I've spent."</p><div className="testi-name">Rahul M.</div><div className="testi-role">D2C founder, skincare</div></div>
-            <div className="testi"><div className="testi-stars">★★★★★</div><p className="testi-text">"The roadmap was scary accurate. It found the exact reasons my product page wasn't converting and gave me the code to fix it."</p><div className="testi-name">Priya S.</div><div className="testi-role">Owner, home &amp; kitchen brand</div></div>
-            <div className="testi"><div className="testi-stars">★★★★★</div><p className="testi-text">"I'm not technical. The copy-paste sections meant I actually shipped the fixes instead of adding them to a to-do list forever."</p><div className="testi-name">Aman K.</div><div className="testi-role">Shopify store owner</div></div>
+          <Reveal><span className="tag tag-red">How it works</span>
+          <h2 className="sec-title">From URL to <span className="red">fixes</span> in 3 steps</h2></Reveal>
+          <div className="steps">
+            <Reveal><div className="step"><div className="step-num">1</div><span className="step-time">~5 sec</span><h3>Paste your link</h3><p>Drop any store or website URL. No signup, no card. We scan it live in about 30 seconds.</p></div></Reveal>
+            <Reveal delay={120}><div className="step"><div className="step-num">2</div><span className="step-time">~30 sec</span><h3>See what&apos;s leaking</h3><p>Get real scores and a checklist of issues — speed, SEO, broken trust signals, missing conversion elements.</p></div></Reveal>
+            <Reveal delay={240}><div className="step"><div className="step-num">3</div><span className="step-time">~2 min</span><h3>Unlock the fix-kit</h3><p>For ₹799, get your fixes written for you, an install-ready file, a 14-day plan, and copy-paste CRO code.</p></div></Reveal>
           </div>
         </div>
       </section>
 
       <section className="sec">
         <div className="sec-inner">
-          <div className="center"><span className="tag tag-blue">Questions</span><h2 className="sec-title">Good to <span className="blue">know</span></h2></div>
-          <div className="faq">
-            <div className="faq-item"><div className="faq-q">Is the scan really free?</div><div className="faq-a">Yes. The full audit — scores, SEO checks, issues — is free with no signup. You only pay ₹799 if you want the done-for-you fixes, install-ready file, and full fix-kit.</div></div>
-            <div className="faq-item"><div className="faq-q">What's actually in the ₹799 fix-kit?</div><div className="faq-a">Your fixes written for you (SEO titles, meta description, FAQ, alt text), an install-ready Shopify file, 7 copy-paste CRO sections, a 14-day action plan, a competitor benchmark, and a downloadable report.</div></div>
-            <div className="faq-item"><div className="faq-q">Will the code work on my Shopify theme?</div><div className="faq-a">The snippets are standard Liquid + HTML/CSS that drop into common theme files. Each tells you exactly where to paste it. Theme-agnostic and easy to remove.</div></div>
-            <div className="faq-item"><div className="faq-q">Can Digistick just do it for me?</div><div className="faq-a">Absolutely — that's our core business. If you'd rather have experts build and optimize your store, book a free strategy call and we'll take it from here.</div></div>
-          </div>
-          <div className="center" style={{ marginTop: 36 }}>
-            <a className="nav-cta" href="#tool" onClick={() => document.getElementById("tool")?.scrollIntoView({ behavior: "smooth" })} style={{ fontSize: 14, padding: "15px 34px", background: "var(--blue)" }}>Scan my site free →</a>
+          <div className="lk-grid">
+            <div>
+              <Reveal><span className="tag tag-yellow">Inside the ₹799 fix-kit</span>
+              <h2 className="sec-title">Everything <span className="blue">written</span>.<br />Everything <span className="red">ready</span>.</h2>
+              <p className="sec-sub">Not a list of problems — the actual fixes, done. Personalized to your store&apos;s niche by AI and checked against D2C benchmarks.</p></Reveal>
+              <div className="lk-list">
+                {[
+                  ["✍️", "Your fixes, pre-written", "SEO titles, meta description, FAQ and alt text — written for your products, ready to paste."],
+                  ["📦", "Install-ready Shopify file", "ds-cro.liquid — one upload adds all 7 CRO sections to your theme."],
+                  ["🗓", "14-day action plan", "A day-by-day order of attack, each step with the why behind it."],
+                  ["📊", "Competitor benchmark", "See exactly how far you sit behind top stores on every metric."],
+                  ["💬", "AI audit assistant", "Ask anything about your report — why a score is low, what to fix first."],
+                  ["⬇️", "Downloadable report", "Take the whole kit as a file for your team or developer."],
+                ].map(([ic, t, d], i) => (
+                  <Reveal key={t} delay={i * 80}><div className="lk-row"><span className="lk-ic">{ic}</span><div><b>{t}</b><p>{d}</p></div><span className="lk-check">✓</span></div></Reveal>
+                ))}
+              </div>
+            </div>
+            <Reveal delay={200} className="lk-sticky">
+              <div className="lk-price">
+                <div className="lk-badge">One-time · per store</div>
+                <div className="lk-num">₹799</div>
+                <div className="lk-sub">Scan free first — pay only if you want the fixes done for you.</div>
+                <div className="lk-perks">
+                  <span>✓ Instant access</span><span>✓ Personalized by AI</span><span>✓ UPI, cards &amp; netbanking</span>
+                </div>
+                <button className="btn-yellow lk-cta" onClick={scrollToScan}>Scan my site free →</button>
+                <div className="lk-note">Secure Cashfree checkout · saved to your dashboard</div>
+              </div>
+            </Reveal>
           </div>
         </div>
+      </section>
+
+      <section className="sec lp-white">
+        <div className="sec-inner center">
+          <Reveal><span className="tag tag-dark">Loved by founders</span>
+          <h2 className="sec-title">Real stores. <span className="blue">Real lifts.</span></h2></Reveal>
+          <div className="testi-grid">
+            <Reveal><div className="testi"><div className="testi-stars">★★★★★</div><p className="testi-text">&quot;Ran my Shopify store through it and pasted in the urgency + COD badges. Add-to-carts jumped within a week. Best ₹799 I&apos;ve spent.&quot;</p><div className="testi-foot"><span className="testi-av av-blue">R</span><div><div className="testi-name">Rahul M.</div><div className="testi-role">D2C founder, skincare</div></div></div></div></Reveal>
+            <Reveal delay={120}><div className="testi"><div className="testi-stars">★★★★★</div><p className="testi-text">&quot;The roadmap was scary accurate. It found the exact reasons my product page wasn&apos;t converting and gave me the code to fix it.&quot;</p><div className="testi-foot"><span className="testi-av av-yellow">P</span><div><div className="testi-name">Priya S.</div><div className="testi-role">Owner, home &amp; kitchen brand</div></div></div></div></Reveal>
+            <Reveal delay={240}><div className="testi"><div className="testi-stars">★★★★★</div><p className="testi-text">&quot;I&apos;m not technical. The copy-paste sections meant I actually shipped the fixes instead of adding them to a to-do list forever.&quot;</p><div className="testi-foot"><span className="testi-av av-red">A</span><div><div className="testi-name">Aman K.</div><div className="testi-role">Shopify store owner</div></div></div></div></Reveal>
+          </div>
+        </div>
+      </section>
+
+      <section className="sec">
+        <div className="sec-inner" style={{ maxWidth: 760 }}>
+          <div className="center"><Reveal><span className="tag tag-blue">Questions</span><h2 className="sec-title">Good to <span className="blue">know</span></h2></Reveal></div>
+          <Reveal><div className="faq">
+            <FaqItem q="Is the scan really free?" a="Yes. The full audit — scores, SEO checks, issues — is free with no signup. You only pay ₹799 if you want the done-for-you fixes, install-ready file, and full fix-kit." />
+            <FaqItem q="What's actually in the ₹799 fix-kit?" a="Your fixes written for you (SEO titles, meta description, FAQ, alt text), an install-ready Shopify file, 7 copy-paste CRO sections, a 14-day action plan, a competitor benchmark, and a downloadable report." />
+            <FaqItem q="Will the code work on my Shopify theme?" a="The snippets are standard Liquid + HTML/CSS that drop into common theme files. Each tells you exactly where to paste it. Theme-agnostic and easy to remove." />
+            <FaqItem q="Do I get a dashboard?" a="Yes — create a free account and every scan is saved to your dashboard, so you can track scores over time, re-scan after fixes, and keep multiple stores in one place." />
+            <FaqItem q="How accurate is the revenue-leak estimate?" a="It's a directional figure computed from the issues actually found in your scan, using conservative D2C benchmarks — a guide to what's at stake, not a guarantee." />
+            <FaqItem q="Can Digistick just do it for me?" a="Absolutely — that's our core business. If you'd rather have experts build and optimize your store, book a free strategy call and we'll take it from here." />
+          </div></Reveal>
+        </div>
+      </section>
+
+      <div className="scallop-cta" aria-hidden="true" />
+      <section className="cta-band">
+        <Reveal>
+          <h2>Stop guessing.<br /><span className="hl hl-y">Start fixing.</span></h2>
+          <p>One free scan shows you exactly where your store is losing buyers.</p>
+          <button className="cta-btn" onClick={scrollToScan}>Scan my site free →</button>
+          <div className="cta-sub">30 seconds · 20+ checks · no card needed</div>
+        </Reveal>
       </section>
       </>)}
 
