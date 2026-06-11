@@ -196,6 +196,27 @@ function Consultant({ open, onClose, isPro, context, onUpgrade, ask, onAsked }) 
 }
 
 
+
+/* Blur-paywall: renders content blurred + non-interactive for free plans, with a Buy-now overlay */
+function MaybeBlur({ locked, title, sub, timer, onUnlock, children, compact }) {
+  if (!locked) return children;
+  return (
+    <div className="mb-wrap">
+      <div className="mb-blur" aria-hidden="true">{children}</div>
+      <div className="mb-overlay">
+        <div className={`mb-card ${compact ? "compact" : ""}`}>
+          <span className="mb-lock"><I n="lock" size={compact ? 16 : 20} /></span>
+          <b>{title}</b>
+          {!compact && <p>{sub}</p>}
+          <div className="mb-price"><s>₹1,499</s> ₹799</div>
+          <button className="g-btn-danger mb-cta" onClick={onUnlock}>Buy now — Unlock Pro</button>
+          {timer && <span className="mb-timer"><I n="clock" size={11} /> Launch price ends in {timer}</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* Red pro-gate shown on locked tabs for free plans */
 function ProGate({ title, desc, items, timer, onUnlock }) {
   return (
@@ -719,6 +740,7 @@ export default function Dashboard() {
                   <div className="g-card">
                     <div className="g-card-h"><h3>Today&apos;s action plan</h3><span className="g-chip">{doneCount}/{planItems.length} done</span></div>
                     {planItems.length === 0 && <div className="g-empty sm"><p>Every check passed — your store is in great shape. Re-scan weekly to keep it that way.</p></div>}
+                    <MaybeBlur locked={!isPro} compact title="Unlock your action plan" timer={launchLeft} onUnlock={() => unlockPro(activeSite.url)}>
                     {planItems.map((c) => (
                       <label className={`g-task ${done[c.label] ? "done" : ""}`} key={c.label}>
                         <input type="checkbox" checked={!!done[c.label]} onChange={() => toggleDone(c.label)} />
@@ -726,6 +748,7 @@ export default function Dashboard() {
                         <span className="g-task-rec">+{inr(perCheck[c.label])}<i>recovery</i></span>
                       </label>
                     ))}
+                    </MaybeBlur>
                     {failed.length > 0 && <button className="g-link" onClick={() => go("Priority Fixes")}>Open all {failed.length} fixes <I n="arrowRight" size={13} /></button>}
                   </div>
                   <div className="g-card">
@@ -752,6 +775,7 @@ export default function Dashboard() {
                 <div className="g-sec-h"><h2>Priority fixes</h2><p>Estimated {inr(leak)}/month at stake · {failed.length} open issue{failed.length !== 1 ? "s" : ""} · ranked by revenue impact</p></div>
                 <div className="g-progress big"><span style={{ width: planPct + "%" }} /><i>{planPct}% of your top plan complete · {inr(recovered)} recovered</i></div>
                 {priority.length === 0 && <div className="g-empty"><h3>No open fixes</h3><p>Every check passed on the last scan.</p></div>}
+                <MaybeBlur locked={!isPro} title={`Unlock all ${failed.length} fixes`} sub="See every issue with step-by-step fixes, difficulty, time and revenue recovery — written for your store." timer={launchLeft} onUnlock={() => unlockPro(activeSite.url)}>
                 {priority.map((c, i) => {
                   const diff = difficultyOf(c);
                   return (
@@ -774,6 +798,7 @@ export default function Dashboard() {
                     </div>
                   );
                 })}
+                </MaybeBlur>
                 {!isPro && failed.length > 0 && (
                   <div className="g-upsell"><div><b>Want these fixed for you?</b><p>The Rs 799 Growth Plan writes your fixes, gives you an install-ready Shopify file, and a 14-day plan.</p></div><button className="g-btn-primary" onClick={() => unlockPro(activeSite.url)}>Unlock Growth Plan — ₹799</button></div>
                 )}
@@ -782,8 +807,8 @@ export default function Dashboard() {
             )}
 
             {/* ============ THEME AUDIT ============ */}
-            {latest && tab === "Theme Audit" && !isPro && <ProGate title="Theme audit is a Pro feature" desc="See how much your current theme is costing you, every conversion blocker inside it, and how it compares to conversion-ready Digistick themes." items={["Theme conversion score", "Blockers with revenue impact", "Digistick theme comparison", "Upgrade recommendations"]} timer={launchLeft} onUnlock={() => unlockPro(activeSite.url)} />}
-            {latest && tab === "Theme Audit" && isPro && (
+            {latest && tab === "Theme Audit" && (
+              <MaybeBlur locked={!isPro} title="Theme audit is locked" sub="Your theme score, every conversion blocker, and how it compares against Digistick themes." timer={launchLeft} onUnlock={() => unlockPro(activeSite.url)}>
               <>
                 {themeOrder && (
                   <div className="g-success">
@@ -826,11 +851,12 @@ export default function Dashboard() {
                   ))}
                 </div>
               </>
+              </MaybeBlur>
             )}
 
             {/* ============ APP STACK ============ */}
-            {latest && tab === "App Stack" && !isPro && <ProGate title="App stack audit is a Pro feature" desc="A full audit of what your store covers, plus the exact Shopify apps that close the gaps found in your scan — with revenue estimates for each." items={["Covered vs missing elements", "Gap-matched app picks", "Impact and difficulty scores", "Estimated revenue gain per app"]} timer={launchLeft} onUnlock={() => unlockPro(activeSite.url)} />}
-            {latest && tab === "App Stack" && isPro && (
+            {latest && tab === "App Stack" && (
+              <MaybeBlur locked={!isPro} title="App stack audit is locked" sub="What your store covers and the exact apps that close your gaps — with revenue estimates." timer={launchLeft} onUnlock={() => unlockPro(activeSite.url)}>
               <>
                 <div className="g-sec-h"><h2>App stack audit</h2><p>What your store already covers, and the apps that close the gaps found in your scan.</p></div>
                 <div className="g-card" style={{ marginBottom: 18 }}>
@@ -853,11 +879,12 @@ export default function Dashboard() {
                   ))}
                 </div>
               </>
+              </MaybeBlur>
             )}
 
             {/* ============ ADS STRATEGY ============ */}
-            {latest && tab === "Ads Strategy" && !isPro && <ProGate title="Ads strategy is a Pro feature" desc="Your ad readiness score, spend-risk analysis, recommended budget, audiences, creative angles, hooks, and a full campaign structure." items={["Ad readiness + risk analysis", "Campaign structure with budget split", "Audiences and creative angles", "Video hooks that convert"]} timer={launchLeft} onUnlock={() => unlockPro(activeSite.url)} />}
-            {latest && tab === "Ads Strategy" && isPro && (
+            {latest && tab === "Ads Strategy" && (
+              <MaybeBlur locked={!isPro} title="Ads strategy is locked" sub="Ad readiness, spend-risk analysis, budget calculator, audiences, hooks and a 4-week scaling plan." timer={launchLeft} onUnlock={() => unlockPro(activeSite.url)}>
               <>
                 <div className="g-sec-h"><h2>Ads strategy center</h2><p>Built from your store&apos;s readiness — fix conversion gaps before scaling spend.</p></div>
                 <div className="g-2col">
@@ -912,6 +939,7 @@ export default function Dashboard() {
                 </div>
                 <div className="g-upsell"><div><b>Want ads run by professionals?</b><p>Digistick manages full-funnel Meta campaigns for D2C brands — creatives, audiences, scaling.</p></div><button className="g-btn-primary" onClick={() => go("Services")}>Book Meta Ads Management</button></div>
               </>
+              </MaybeBlur>
             )}
 
             {/* ============ COMPETITORS ============ */}
@@ -1071,7 +1099,7 @@ export default function Dashboard() {
             {tab === "History" && (
               <>
                 <div className="g-sec-h"><h2>Score history</h2><p>Track your growth score over time and prove your fixes are working.</p></div>
-                {isPro ? (
+                <MaybeBlur locked={!isPro} title="Score history is locked" sub="Track your growth score scan-by-scan and prove your fixes are working." timer={launchLeft} onUnlock={() => unlockPro(activeSite.url)}>
                   <div className="g-card">
                     <Spark scans={siteScans} />
                     <div className="g-hist">
@@ -1080,7 +1108,7 @@ export default function Dashboard() {
                       ))}
                     </div>
                   </div>
-                ) : <div className="g-upsell"><div><b>Score history is a Pro feature.</b><p>Unlock the Rs 799 Growth Plan to track your scores over time.</p></div><button className="g-btn-primary" onClick={() => unlockPro(activeSite.url)}>Unlock Pro — ₹799</button></div>}
+                </MaybeBlur>
               </>
             )}
 

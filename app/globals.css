@@ -1777,5 +1777,24 @@ body { background: var(--cream); color: var(--ink); font-family: var(--font); -w
 /* v2.4 — OTP verification step */
 .au2-back { display: inline-flex; align-items: center; gap: 6px; background: none; border: 0; font-family: var(--font); font-size: 12.5px; font-weight: 700; color: #6b7280; cursor: pointer; margin-bottom: 14px; }
 .au2-otp-ic { width: 56px; height: 56px; border-radius: 16px; background: #eef3ff; color: #2E60B4; display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
-.au2-otp input { text-align: center; font-size: 26px; font-weight: 800; letter-spacing: 10px; padding: 12px 0; }
+.au2-otp input { text-align: center; font-size: 24px; font-weight: 800; letter-spacing: 8px; padding: 12px 0; }
 .au2-note { font-size: 12.5px; font-weight: 600; color: #2E60B4; background: #eef3ff; border-radius: 12px; padding: 11px 14px; margin-bottom: 14px; line-height: 1.5; }
+
+/* v2.5 — blur paywall */
+.mb-wrap { position: relative; }
+.mb-blur { filter: blur(7px); pointer-events: none; user-select: none; opacity: .85; }
+.mb-overlay { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 6; padding: 18px; }
+.mb-card { background: var(--g-card); border: 1.5px solid #fadcdc; border-radius: 22px; box-shadow: 0 24px 60px rgba(21,32,58,.25); padding: 26px 30px; text-align: center; max-width: 380px; width: 100%; }
+.mb-card.compact { padding: 18px 20px; max-width: 300px; }
+.mb-lock { width: 44px; height: 44px; border-radius: 50%; background: #fde8e8; color: var(--g-danger); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 10px; }
+.mb-card.compact .mb-lock { width: 34px; height: 34px; margin-bottom: 7px; }
+.mb-card b { font-size: 16px; display: block; }
+.mb-card.compact b { font-size: 13.5px; }
+.mb-card p { font-size: 12.5px; color: var(--g-muted); line-height: 1.6; margin-top: 7px; }
+.mb-price { font-size: 22px; font-weight: 900; margin-top: 12px; }
+.mb-card.compact .mb-price { font-size: 17px; margin-top: 8px; }
+.mb-price s { font-size: 13px; font-weight: 600; color: var(--g-muted); margin-right: 7px; }
+.mb-cta { width: 100%; margin-top: 12px; padding: 13px 20px; }
+.mb-card.compact .mb-cta { padding: 10px 16px; font-size: 12.5px; margin-top: 9px; }
+.mb-timer { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; color: var(--g-danger); margin-top: 11px; }
+@media (max-width: 880px) { .mb-card { padding: 20px 18px; } }

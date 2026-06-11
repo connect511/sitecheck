@@ -30,7 +30,7 @@ export default function AuthModal({ onClose, onAuthed }) {
         if (error) throw error;
         if (data.session) { onAuthed?.(data.user); onClose?.(); return; } // confirmation disabled → straight in
         setStep("otp");
-        note("We sent a 6-digit code to " + email + ". Enter it below to verify.");
+        note("We sent a verification code to " + email + ". Enter it below.");
       } else {
         const { data, error } = await sb.auth.signInWithPassword({ email, password });
         if (error) throw error;
@@ -45,7 +45,7 @@ export default function AuthModal({ onClose, onAuthed }) {
   async function verifyOtp() {
     const sb = getSupabase();
     const code = otp.replace(/\D/g, "");
-    if (code.length !== 6) { note("Enter the 6-digit code.", true); return; }
+    if (code.length < 6) { note("Enter the full code from your email.", true); return; }
     setBusy(true); note("");
     try {
       const { data, error } = await sb.auth.verifyOtp({ email, token: code, type: "signup" });
@@ -104,10 +104,10 @@ export default function AuthModal({ onClose, onAuthed }) {
               <button className="au2-back" onClick={() => { setStep("form"); note(""); }}><I n="arrowRight" size={13} style={{ transform: "rotate(180deg)" }} /> Back</button>
               <div className="au2-otp-ic"><I n="mail" size={26} /></div>
               <h3>Verify your email</h3>
-              <p className="au2-sub">Enter the 6-digit code we sent to <b>{email}</b>.</p>
+              <p className="au2-sub">Enter the code we sent to <b>{email}</b>.</p>
 
               <label className="au2-label">Verification code</label>
-              <div className="au2-input au2-otp"><input inputMode="numeric" maxLength={6} value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))} onKeyDown={(e) => e.key === "Enter" && verifyOtp()} placeholder="123456" autoFocus /></div>
+              <div className="au2-input au2-otp"><input inputMode="numeric" maxLength={8} value={otp} onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))} onKeyDown={(e) => e.key === "Enter" && verifyOtp()} placeholder="Enter code" autoFocus /></div>
 
               {msg && <div className={err ? "au2-msg" : "au2-note"}>{msg}</div>}
 
