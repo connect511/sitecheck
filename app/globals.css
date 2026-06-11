@@ -1676,3 +1676,90 @@ body { background: var(--cream); color: var(--ink); font-family: var(--font); -w
   .rp-install { flex-direction: column; align-items: stretch; }
   .rp-install .g-btn-primary { text-align: center; }
 }
+
+/* ================================================================
+   v2.2 — service marketplace, bookings, two-way chat, admin inbox
+   ================================================================ */
+
+/* Service card booking */
+.g-sv-unit { display: block; font-style: normal; font-size: 9.5px; font-weight: 600; color: var(--g-muted); }
+.g-sv-book { display: inline-flex; align-items: center; gap: 6px; background: var(--g-primary); color: #fff; border: 0; border-radius: 11px; font-family: var(--font); font-size: 12px; font-weight: 800; padding: 9px 16px; cursor: pointer; transition: transform .15s; }
+.g-sv-book:hover { transform: translateY(-2px); }
+
+/* Booking modal */
+.bk-modal { width: 540px; }
+.bk-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 24px 24px 0; }
+.bk-head h3 { font-size: 19px; font-weight: 800; }
+.bk-members { padding: 16px 24px 0; display: flex; flex-direction: column; gap: 10px; }
+.bk-member { display: flex; align-items: center; gap: 13px; width: 100%; text-align: left; background: var(--g-bg); border: 2px solid transparent; border-radius: 16px; padding: 13px 15px; cursor: pointer; font-family: var(--font); transition: border .15s, background .15s; }
+.bk-member.on { border-color: var(--g-primary); background: #eef3ff; }
+.bk-av { width: 42px; height: 42px; border-radius: 50%; background: linear-gradient(135deg, var(--g-primary), var(--g-secondary)); color: #fff; font-weight: 800; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.bk-m-body { flex: 1; min-width: 0; }
+.bk-m-body b { font-size: 14px; display: block; color: var(--g-ink); }
+.bk-m-body > span { font-size: 11px; color: var(--g-muted); font-weight: 600; }
+.bk-m-meta { display: flex; gap: 12px; margin-top: 5px; font-size: 10.5px; font-weight: 700; color: var(--g-muted); }
+.bk-m-meta span { display: inline-flex; align-items: center; gap: 4px; }
+.bk-star { color: #d97706; }
+.bk-m-price { text-align: right; flex-shrink: 0; }
+.bk-m-price b { font-size: 16px; font-weight: 900; color: var(--g-ink); }
+.bk-m-price i { display: block; font-style: normal; font-size: 9.5px; font-weight: 600; color: var(--g-muted); }
+.bk-phone { display: flex; align-items: center; gap: 10px; margin: 16px 24px 0; border: 1.5px solid var(--g-line); border-radius: 14px; padding: 0 16px; color: var(--g-muted); }
+.bk-phone:focus-within { border-color: var(--g-primary); }
+.bk-phone input { flex: 1; border: 0; outline: none; font-family: var(--font); font-size: 14px; padding: 13px 0; background: none; }
+.bk-cta { display: block; width: calc(100% - 48px); margin: 16px 24px 0; }
+.bk-cta:disabled { opacity: .6; transform: none; cursor: not-allowed; }
+.bk-note { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 10.5px; font-weight: 600; color: var(--g-muted); padding: 12px 24px 20px; text-align: center; }
+
+/* Booking status chips */
+.bk-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+.bk-status { font-size: 10px; font-weight: 800; letter-spacing: .5px; border-radius: 20px; padding: 4px 12px; }
+.bk-status.pending { background: var(--g-bg); color: var(--g-muted); }
+.bk-status.paid { background: #fff7e0; color: #b45309; }
+.bk-status.confirmed { background: #e8f0ff; color: var(--g-primary); }
+.bk-status.completed { background: #effaf3; color: var(--g-success); }
+.bk-status.cancelled { background: #fde8e8; color: var(--g-danger); }
+
+/* Chat thread (user + admin) */
+.g-chatbox { display: flex; flex-direction: column; max-height: 70vh; }
+.g-thread { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 4px 2px 14px; }
+.g-bubble { max-width: 78%; border-radius: 18px; padding: 12px 16px; }
+.g-bubble.them { align-self: flex-start; background: var(--g-bg); border-bottom-left-radius: 6px; }
+.g-bubble.me { align-self: flex-end; background: linear-gradient(135deg, var(--g-primary), var(--g-secondary)); color: #fff; border-bottom-right-radius: 6px; }
+.g-bubble b { font-size: 13.5px; display: block; margin-bottom: 3px; }
+.g-bubble p { font-size: 13px; line-height: 1.55; white-space: pre-wrap; }
+.g-bubble time { display: block; font-size: 9.5px; opacity: .65; margin-top: 6px; font-weight: 600; }
+.g-bubble-head { margin-bottom: 6px; }
+.g-reply { display: flex; gap: 9px; border-top: 1px solid var(--g-line); padding-top: 14px; }
+.g-reply input { flex: 1; border: 1.5px solid var(--g-line); border-radius: 14px; font-family: var(--font); font-size: 13.5px; padding: 12px 16px; outline: none; }
+.g-reply input:focus { border-color: var(--g-primary); }
+.g-reply button { width: 48px; background: var(--g-primary); color: #fff; border: 0; border-radius: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+/* Admin tabs / bookings / inbox */
+.adm-tabs { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
+.adm-tabs button { display: inline-flex; align-items: center; gap: 8px; background: var(--g-card); border: 1px solid var(--g-line); border-radius: 14px; font-family: var(--font); font-size: 13px; font-weight: 700; color: var(--g-muted); padding: 11px 20px; cursor: pointer; box-shadow: var(--g-shadow); }
+.adm-tabs button.on { background: linear-gradient(135deg, var(--g-primary), var(--g-secondary)); color: #fff; border-color: transparent; }
+.adm-tr.bk { grid-template-columns: 1.3fr 1.3fr 1fr .9fr .8fr 1fr .6fr; min-width: 980px; }
+.adm-inbox { display: grid; grid-template-columns: 320px 1fr; gap: 16px; align-items: start; }
+.adm-threads { max-height: 70vh; overflow-y: auto; }
+.adm-thread { display: flex; align-items: center; gap: 11px; width: 100%; text-align: left; background: none; border: 0; border-radius: 14px; padding: 10px; cursor: pointer; font-family: var(--font); }
+.adm-thread.on, .adm-thread:hover { background: var(--g-bg); }
+.adm-thread-body { flex: 1; min-width: 0; }
+.adm-thread-body b { font-size: 12.5px; display: block; color: var(--g-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.adm-thread-body span { font-size: 11px; color: var(--g-muted); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-top: 1px; }
+.adm-needs { font-size: 9px; font-weight: 800; letter-spacing: 1px; background: var(--g-danger); color: #fff; border-radius: 20px; padding: 4px 9px; flex-shrink: 0; }
+.adm-convo { display: flex; flex-direction: column; min-height: 420px; max-height: 70vh; }
+.adm-thread-msgs { flex: 1; }
+
+/* Ads budget calculator */
+.g-budget-input { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; font-size: 13px; font-weight: 700; }
+.g-budget-input input { width: 110px; border: 1.5px solid var(--g-line); border-radius: 12px; font-family: var(--font); font-size: 15px; font-weight: 800; padding: 10px 14px; outline: none; text-align: center; }
+.g-budget-input input:focus { border-color: var(--g-primary); }
+
+@media (max-width: 880px) {
+  .adm-inbox { grid-template-columns: 1fr; }
+  .bk-modal { width: 100%; }
+  .bk-cta { width: calc(100% - 36px); margin: 14px 18px 0; }
+  .bk-head, .bk-members, .bk-phone { padding-left: 18px; padding-right: 18px; margin-left: 0; margin-right: 0; }
+  .bk-phone { margin: 14px 18px 0; padding: 0 14px; }
+  .g-bubble { max-width: 90%; }
+}

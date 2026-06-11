@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { getSupabase, supabaseConfigured } from "../lib/supabaseClient";
 import AuthModal from "../AuthModal";
 import I from "../lib/icons";
+import { SERVICES_CATALOG } from "../lib/servicesCatalog";
 
 /* ============ Growth Workspace navigation ============ */
 const NAV = [
@@ -20,13 +21,6 @@ const THEMES = [
   { id: "pulse", name: "Pulse", tag: "Best for single-product", cls: "thm-p", preview: "https://themes.shopify.com/", desc: "Long-form landing-page style theme made to convert cold traffic into buyers.", features: ["Exit-intent offer", "FAQ + social proof", "Email capture"], uplift: "+20-30% on cold traffic" },
 ];
 
-const SERVICES = [
-  { ic: "zap", key: "speed", name: "Store Speed Optimization", desc: "We take your Performance score above 85 — images, scripts, theme code, the works.", price: "From Rs 4,999", cls: "sv-blue" },
-  { ic: "search", key: "seo", name: "SEO Optimization", desc: "Full on-page + technical SEO sprint: metas, schema, structure, content depth.", price: "From Rs 9,999", cls: "sv-purple" },
-  { ic: "cart", key: "cro", name: "CRO Upgrade", desc: "Trust, urgency, reviews, sticky cart — every conversion gap on your list, installed.", price: "From Rs 7,999", cls: "sv-amber" },
-  { ic: "megaphone", key: "ads", name: "Meta Ads Management", desc: "Full-funnel campaign setup and management — creatives, audiences, scaling.", price: "From Rs 15,000/mo", cls: "sv-green" },
-  { ic: "trophy", key: "growth", name: "Complete Growth Package", desc: "Speed + SEO + CRO + Ads under one roof. Your store, run like our best clients.", price: "Custom", cls: "sv-dark" },
-];
 
 /* ============ Helpers ============ */
 function color(v) { if (v == null) return "var(--g-muted)"; if (v >= 90) return "var(--g-success)"; if (v >= 50) return "#d97706"; return "var(--g-danger)"; }
@@ -271,6 +265,12 @@ export default function Dashboard() {
   const [inbox, setInbox] = useState([]);
   const [report, setReport] = useState(null);
   const [proPop, setProPop] = useState(false);
+  const [bookings, setBookings] = useState([]);
+  const [bookSvc, setBookSvc] = useState(null);   // service being booked
+  const [bookMember, setBookMember] = useState(null);
+  const [bookPhone, setBookPhone] = useState("");
+  const [reply, setReply] = useState("");
+  const [dailyBudget, setDailyBudget] = useState(500);
   const configured = supabaseConfigured();
 
   useEffect(() => {
@@ -317,17 +317,17 @@ export default function Dashboard() {
 
   const loadInbox = useCallback(async () => {
     const sb = getSupabase(); if (!sb) return;
-    const { data } = await sb.from("admin_messages").select("*").order("created_at", { ascending: false });
+    const { data } = await sb.from("admin_messages").select("*").order("created_at", { ascending: true });
     if (data) setInbox(data);
   }, []);
   useEffect(() => {
     if (tab !== "Messages") return;
-    const unread = inbox.filter((m) => !m.read_at);
+    const unread = inbox.filter((m) => !m.read_at && m.sender !== "user");
     if (!unread.length) return;
     const sb = getSupabase(); if (!sb) return;
     const now = new Date().toISOString();
-    sb.from("admin_messages").update({ read_at: now }).is("read_at", null).then(() => {
-      setInbox((ms) => ms.map((m) => m.read_at ? m : { ...m, read_at: now }));
+    sb.from("admin_messages").update({ read_at: now }).is("read_at", null).neq("sender", "user").then(() => {
+      setInbox((ms) => ms.map((m) => m.read_at || m.sender === "user" ? m : { ...m, read_at: now }));
     });
   }, [tab, inbox]);
 
@@ -345,6 +345,11 @@ export default function Dashboard() {
     const r = await api("list");
     if (r.sites) { setSites(r.sites); setScans(r.scans || []); setReports(r.reports || []); if (!active && r.sites[0]) setActive(r.sites[0].id); }
   }, [api, active]);
+  const loadBookings = useCallback(async () => {
+    const r = await api("myBookings");
+    if (r?.bookings) setBookings(r.bookings);
+  }, [api]);
+  useEffect(() => { if (user) loadBookings(); }, [user, loadBookings]);
   const dedupedRef = useRef(false);
   const loadDataDeduped = useCallback(async () => {
     if (!dedupedRef.current) { dedupedRef.current = true; try { await api("dedupeSites"); } catch {} }
@@ -378,6 +383,21 @@ export default function Dashboard() {
       })();
       return;
     }
+    const bookingId = params.get("booking");
+    if (bookingId && orderId && !scanQueuedRef.current) {
+      scanQueuedRef.current = true;
+      window.history.replaceState({}, "", "/dashboard");
+      (async () => {
+        setBusy("unlocking");
+        try {
+          const r = await api("confirmBooking", { booking_id: bookingId, orderId });
+          if (r.ok) { await loadBookings(); setTab("Services"); alert("Booking confirmed! Your advance is paid — our team will reach out within 24 hours."); }
+          else alert(r.error || "We couldn't verify that payment. If money was deducted, contact support.");
+        } finally { setBusy(""); }
+      })();
+      return;
+    }
+
     const toScan = params.get("scan");
     if (toScan && !scanQueuedRef.current) {
       scanQueuedRef.current = true;
@@ -448,6 +468,27 @@ export default function Dashboard() {
     a.click();
     URL.revokeObjectURL(a.href);
   }
+  async function payAdvance() {
+    if (!bookSvc || !bookMember) return;
+    const digits = bookPhone.replace(/\D/g, "");
+    if (digits.length < 10) { alert("Please enter a valid 10-digit phone number."); return; }
+    setBusy("booking");
+    try {
+      const r = await api("bookService", { service_key: bookSvc.key, member_id: bookMember.id, phone: bookPhone, site_id: active });
+      if (!r?.paymentSessionId) throw new Error(r?.error || "Could not start checkout.");
+      await loadCashfreeSDK();
+      const cashfree = window.Cashfree({ mode: r.env === "production" ? "production" : "sandbox" });
+      cashfree.checkout({ paymentSessionId: r.paymentSessionId, redirectTarget: "_self" });
+    } catch (e) { alert(e.message); setBusy(""); }
+  }
+  async function sendReply() {
+    const t = reply.trim();
+    if (!t) return;
+    const sb = getSupabase(); if (!sb || !user) return;
+    const { data, error } = await sb.from("admin_messages").insert({ user_id: user.id, title: "", body: t, kind: "note", sender: "user", read_at: new Date().toISOString() }).select().single();
+    if (error) { alert("Could not send — try again. (If this keeps failing, the v19 database update may not be applied.)"); return; }
+    setInbox((ms) => [...ms, data]); setReply("");
+  }
 
   if (loading) return <div className="gcc"><div className="gcc-load">Loading your Growth Workspace…</div></div>;
   if (!configured) return (
@@ -512,7 +553,7 @@ export default function Dashboard() {
   ].sort((a, b) => new Date(b.t) - new Date(a.t)).slice(0, 8);
 
   const go = (t) => { setTab(t); window.scrollTo({ top: 0, behavior: "smooth" }); };
-  const unread = inbox.filter((m) => !m.read_at).length;
+  const unread = inbox.filter((m) => !m.read_at && m.sender !== "user").length;
 
   return (
     <div className="gcc">
@@ -810,7 +851,35 @@ export default function Dashboard() {
                   <div className="g-card"><div className="g-card-h"><h3><I n="image" size={15} /> Creative angles</h3></div><ul className="g-list"><li>Problem to product demo in first 3 seconds</li><li>UGC unboxing with COD trust callout</li><li>Founder story — why you built this</li><li>Before/after or social-proof compilation</li></ul></div>
                   <div className="g-card"><div className="g-card-h"><h3><I n="zap" size={15} /> Video hooks</h3></div><ul className="g-list"><li>&quot;I stopped buying ___ from big brands because…&quot;</li><li>&quot;POV: your ___ finally arrives and it&apos;s actually good&quot;</li><li>&quot;3 signs you&apos;re overpaying for ___&quot;</li><li>&quot;Don&apos;t buy ___ before watching this&quot;</li></ul></div>
                 </div>
-                <div className="g-upsell"><div><b>Want ads run by professionals?</b><p>Digistick manages full-funnel Meta campaigns for D2C brands — creatives, audiences, scaling.</p></div><a className="g-btn-primary" href="https://digistick.in" target="_blank" rel="noopener noreferrer">Book a strategy call</a></div>
+                <div className="g-2col">
+                  <div className="g-card">
+                    <div className="g-card-h"><h3><I n="money" size={15} /> Budget calculator</h3></div>
+                    <div className="g-budget-input"><span>Daily budget</span><input type="number" min="200" step="100" value={dailyBudget} onChange={(e) => setDailyBudget(Math.max(0, parseInt(e.target.value) || 0))} /><span>₹/day</span></div>
+                    {[["Cold campaign", 0.6], ["Retargeting", 0.25], ["Lookalike", 0.15]].map(([n, p]) => (
+                      <div className="g-row" key={n}><div><b>{n}</b><span>{Math.round(p * 100)}% of budget</span></div><span className="g-task-rec">{inr(Math.round(dailyBudget * p))}<i>/day</i></span></div>
+                    ))}
+                    <div className="g-budget" style={{ marginTop: 12 }}><I n="calendar" size={14} /> Monthly total <b>{inr(dailyBudget * 30)}</b></div>
+                  </div>
+                  <div className="g-card">
+                    <div className="g-card-h"><h3><I n="target" size={15} /> KPI targets to hold</h3></div>
+                    {[["ROAS", "3x or higher", "Below 2x after 7 days = kill the ad set"],
+                      ["CPA", "Under 25% of your AOV", "Your profit ceiling — calculate before launch"],
+                      ["CTR", "1.5%+ on cold traffic", "Below 1% means the creative, not the audience"],
+                      ["CPM", "₹80–₹250 typical (IN)", "Spikes usually mean audience fatigue — refresh creatives"]].map(([k, v, d]) => (
+                      <div className="g-row" key={k}><div><b>{k}: {v}</b><span>{d}</span></div></div>
+                    ))}
+                  </div>
+                </div>
+                <div className="g-card" style={{ marginBottom: 18 }}>
+                  <div className="g-card-h"><h3><I n="trend" size={15} /> 4-week scaling plan</h3></div>
+                  {[["Week 1", "Launch 3 creatives at ₹" + Math.round(dailyBudget) + "/day total. Touch nothing for 4 days — let the algorithm learn."],
+                    ["Week 2", "Kill ad sets under 2x ROAS. Move their budget to the winner. Launch 2 new hooks against it."],
+                    ["Week 3", "Switch on retargeting (site visitors + cart abandoners) with urgency + social-proof angles."],
+                    ["Week 4", "If 50+ purchases: launch 1–3% lookalike. Raise winning budgets by 20% every 3 days — never double overnight."]].map(([w, d]) => (
+                    <div className="g-row" key={w}><span className="rp-day-n">{w}</span><div><span style={{ fontSize: 12.5, color: "var(--g-ink)" }}>{d}</span></div></div>
+                  ))}
+                </div>
+                <div className="g-upsell"><div><b>Want ads run by professionals?</b><p>Digistick manages full-funnel Meta campaigns for D2C brands — creatives, audiences, scaling.</p></div><button className="g-btn-primary" onClick={() => go("Services")}>Book Meta Ads Management</button></div>
               </>
             )}
 
@@ -838,14 +907,30 @@ export default function Dashboard() {
             {/* ============ SERVICES ============ */}
             {tab === "Services" && (
               <>
-                <div className="g-sec-h"><h2>Digistick services</h2><p>Done-for-you growth — recommended dynamically from your scan findings.</p></div>
+                <div className="g-sec-h"><h2>Digistick services</h2><p>Done-for-you growth. Pick a specialist, pay a 10% advance, and your booking lands with our team instantly.</p></div>
+
+                {bookings.length > 0 && (
+                  <div className="g-card" style={{ marginBottom: 18 }}>
+                    <div className="g-card-h"><h3><I n="calendar" size={15} /> My bookings</h3></div>
+                    {bookings.map((b) => (
+                      <div className="g-row" key={b.id}>
+                        <div><b>{b.service_name}</b><span>with {b.member_name} · booked {new Date(b.created_at).toLocaleDateString("en-IN")}</span></div>
+                        <div className="bk-right">
+                          <span className={`bk-status ${b.status}`}>{b.status === "pending" ? "Awaiting payment" : b.status === "paid" ? "Paid — pending confirmation" : b.status === "confirmed" ? "Confirmed" : b.status === "completed" ? "Completed" : "Cancelled"}</span>
+                          <span className="g-dim">{inr(b.advance_amount)} advance · {inr(b.price)} total</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
                 <div className="g-services">
-                  {SERVICES.map((s) => (
-                    <div className={`g-card g-service ${s.cls} ${recommendedService === s.key ? "rec" : ""}`} key={s.name}>
-                      {recommendedService === s.key && <span className="g-sv-rec">Recommended for you</span>}
-                      <span className="g-sv-ic"><I n={s.ic} size={17} /></span>
-                      <b>{s.name}</b><p>{s.desc}</p>
-                      <div className="g-sv-foot"><span>{s.price}</span><a href="https://digistick.in" target="_blank" rel="noopener noreferrer">Book <I n="arrowRight" size={12} /></a></div>
+                  {SERVICES_CATALOG.map((s2) => (
+                    <div className={`g-card g-service ${s2.cls} ${recommendedService === s2.key ? "rec" : ""}`} key={s2.key}>
+                      {recommendedService === s2.key && <span className="g-sv-rec">Recommended for you</span>}
+                      <span className="g-sv-ic"><I n={s2.ic} size={17} /></span>
+                      <b>{s2.name}</b><p>{s2.desc}</p>
+                      <div className="g-sv-foot"><span>Starts at {inr(s2.start)}<i className="g-sv-unit">{s2.unit}</i></span><button className="g-sv-book" onClick={() => { setBookSvc(s2); setBookMember(null); }}>Book <I n="arrowRight" size={12} /></button></div>
                     </div>
                   ))}
                 </div>
@@ -855,19 +940,24 @@ export default function Dashboard() {
             {/* ============ MESSAGES ============ */}
             {tab === "Messages" && (
               <>
-                <div className="g-sec-h"><h2>Messages from Digistick</h2><p>Recommendations and offers from our team, based on your store&apos;s data.</p></div>
-                {inbox.length === 0 && <div className="g-empty"><h3>No messages yet</h3><p>When the Digistick team has a recommendation for your store, it appears here.</p></div>}
-                {inbox.map((m) => (
-                  <div className={`g-card g-inbox ${!m.read_at ? "unread" : ""}`} key={m.id}>
-                    <div className="g-inbox-top">
-                      <span className="g-inbox-kind">{m.kind === "offer" ? "Offer" : m.kind === "recommendation" ? "Recommendation" : "Note"}</span>
-                      <span className="g-dim">{new Date(m.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}</span>
-                    </div>
-                    <b>{m.title}</b>
-                    <p>{m.body}</p>
-                    <a className="g-link" href="https://digistick.in" target="_blank" rel="noopener noreferrer">Reply / book a call <I n="arrowRight" size={13} /></a>
+                <div className="g-sec-h"><h2>Messages</h2><p>Chat with the Digistick team — recommendations, offers, and your replies.</p></div>
+                <div className="g-card g-chatbox">
+                  <div className="g-thread">
+                    {inbox.length === 0 && <div className="g-empty sm"><p>No messages yet. Say hi — our team replies within a few hours.</p></div>}
+                    {inbox.map((m) => (
+                      <div className={`g-bubble ${m.sender === "user" ? "me" : "them"}`} key={m.id}>
+                        {m.sender !== "user" && m.title && <div className="g-bubble-head"><span className="g-inbox-kind">{m.kind === "offer" ? "Offer" : m.kind === "recommendation" ? "Recommendation" : "Digistick"}</span></div>}
+                        {m.sender !== "user" && m.title && <b>{m.title}</b>}
+                        <p>{m.body}</p>
+                        <time>{new Date(m.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}</time>
+                      </div>
+                    ))}
                   </div>
-                ))}
+                  <div className="g-reply">
+                    <input value={reply} onChange={(e) => setReply(e.target.value)} onKeyDown={(e) => e.key === "Enter" && sendReply()} placeholder="Write a reply to the Digistick team…" />
+                    <button onClick={sendReply}><I n="send" size={15} /></button>
+                  </div>
+                </div>
               </>
             )}
 
@@ -974,6 +1064,35 @@ export default function Dashboard() {
           </>
         )}
       </main>
+
+      {bookSvc && (
+        <div className="pp-overlay" onClick={() => setBookSvc(null)}>
+          <div className="pp-modal bk-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="bk-head">
+              <div><h3>{bookSvc.name}</h3><p className="g-dim">Choose your specialist · pay just <b>10% advance</b> to book — balance after kickoff call.</p></div>
+              <button className="ai-x dark" onClick={() => setBookSvc(null)}><I n="x" size={15} /></button>
+            </div>
+            <div className="bk-members">
+              {bookSvc.members.map((m) => (
+                <button key={m.id} className={`bk-member ${bookMember?.id === m.id ? "on" : ""}`} onClick={() => setBookMember(m)}>
+                  <span className="bk-av">{m.name.split(" ").map((x) => x[0]).join("").slice(0, 2)}</span>
+                  <div className="bk-m-body">
+                    <b>{m.name}</b>
+                    <span>{m.role}</span>
+                    <div className="bk-m-meta"><span className="bk-star"><I n="star" size={11} /> {m.rating}</span><span>{m.jobs} projects</span><span><I n="clock" size={11} /> {m.days}</span></div>
+                  </div>
+                  <div className="bk-m-price"><b>{inr(m.price)}</b><i>{bookSvc.unit}</i></div>
+                </button>
+              ))}
+            </div>
+            <div className="bk-phone"><I n="phone" size={15} /><input type="tel" value={bookPhone} onChange={(e) => setBookPhone(e.target.value)} placeholder="Your phone number (for the kickoff call)" /></div>
+            <button className="g-btn-danger bk-cta" onClick={payAdvance} disabled={!bookMember || busy === "booking"}>
+              {busy === "booking" ? "Starting checkout…" : bookMember ? `Pay ${inr(Math.round(bookMember.price * 0.1))} advance & book ${bookMember.name.split(" ")[0]}` : "Select a specialist to continue"}
+            </button>
+            <div className="bk-note"><I n="shield" size={12} /> Secure Cashfree checkout · advance is fully adjustable against the final invoice · booking lands with our team instantly</div>
+          </div>
+        </div>
+      )}
 
       {activeSite && latest && !isPro && proPop && <ProPopup leak={leak} timer={launchLeft} onClose={() => setProPop(false)} onUnlock={() => { setProPop(false); unlockPro(activeSite.url); }} />}
 

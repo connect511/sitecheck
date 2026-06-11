@@ -22,6 +22,9 @@ function ago(t) {
 }
 function scoreColor(v) { if (v == null) return "var(--g-muted)"; if (v >= 70) return "var(--g-success)"; if (v >= 50) return "#d97706"; return "var(--g-danger)"; }
 
+const BK_STATUSES = ["paid", "confirmed", "completed", "cancelled"];
+const BK_LABEL = { pending: "Awaiting payment", paid: "Paid", confirmed: "Confirmed", completed: "Completed", cancelled: "Cancelled" };
+
 export default function Admin() {
   const [user, setUser] = useState(null);
   const [authOpen, setAuthOpen] = useState(false);
@@ -35,6 +38,11 @@ export default function Admin() {
   const [busy, setBusy] = useState("");
   const [msgTo, setMsgTo] = useState(null);     // client object being messaged
   const [msg, setMsg] = useState({ title: "", body: "", kind: "recommendation", site_id: "" });
+  const [view, setView] = useState("clients");   // clients | bookings | inbox
+  const [bookings, setBookings] = useState([]);
+  const [threads, setThreads] = useState([]);
+  const [thread, setThread] = useState(null);    // open thread
+  const [tReply, setTReply] = useState("");
   const configured = supabaseConfigured();
 
   const token = useCallback(async () => {
@@ -52,8 +60,10 @@ export default function Admin() {
   }, [token]);
 
   const loadOverview = useCallback(async () => {
-    const r = await api("overview");
+    const [r, b, t] = await Promise.all([api("overview"), api("listBookings"), api("listThreads")]);
     if (r?.stats) { setStats(r.stats); setClients(r.clients || []); }
+    if (b?.bookings) setBookings(b.bookings);
+    if (t?.threads) setThreads(t.threads);
   }, [api]);
 
   useEffect(() => {
@@ -90,6 +100,21 @@ export default function Admin() {
       if (detail?.user?.id === r.message.user_id) setDetail((d) => ({ ...d, messages: [r.message, ...d.messages] }));
       setClients((cs) => cs.map((c) => c.id === r.message.user_id ? { ...c, messages: c.messages + 1 } : c));
       alert("Message sent — it now shows in the client's dashboard.");
+    } else alert(r?.error || "Could not send.");
+  }
+  async function setBkStatus(id, status) {
+    await api("setBookingStatus", { booking_id: id, status });
+    setBookings((bs) => bs.map((b) => b.id === id ? { ...b, status } : b));
+  }
+  async function sendThreadReply() {
+    const t = tReply.trim();
+    if (!t || !thread) return;
+    const r = await api("sendMessage", { user_id: thread.user_id, title: "", body: t, kind: "note" });
+    if (r?.ok) {
+      const m = r.message;
+      setThread((th) => ({ ...th, messages: [...th.messages, m], last: m, needsReply: false }));
+      setThreads((ts) => ts.map((x) => x.user_id === thread.user_id ? { ...x, messages: [...x.messages, m], last: m, needsReply: false } : x));
+      setTReply("");
     } else alert(r?.error || "Could not send.");
   }
   async function logout() { const sb = getSupabase(); await sb?.auth.signOut(); setUser(null); setStats(null); }
@@ -142,8 +167,15 @@ export default function Admin() {
           </div>
         )}
 
+        {/* ---- View switcher ---- */}
+        <div className="adm-tabs">
+          {[["clients", "users", "Clients & Leads"], ["bookings", "calendar", `Bookings${bookings.filter((b) => b.status === "paid").length ? " (" + bookings.filter((b) => b.status === "paid").length + " new)" : ""}`], ["inbox", "chat", `Inbox${threads.filter((t) => t.needsReply).length ? " (" + threads.filter((t) => t.needsReply).length + ")" : ""}`]].map(([v, ic, lbl]) => (
+            <button key={v} className={view === v ? "on" : ""} onClick={() => setView(v)}><I n={ic} size={14} /> {lbl}</button>
+          ))}
+        </div>
+
         {/* ---- Clients table ---- */}
-        <div className="g-card">
+        {view === "clients" && <div className="g-card">
           <div className="g-card-h">
             <h3>Clients & leads</h3>
             <input className="adm-search" value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Search email or store…" />
@@ -176,7 +208,75 @@ export default function Admin() {
             ))}
             {shown.length === 0 && <p className="g-dim" style={{ padding: 18 }}>No clients match.</p>}
           </div>
-        </div>
+        </div>}
+
+        {/* ---- Bookings ---- */}
+        {view === "bookings" && (
+          <div className="g-card">
+            <div className="g-card-h"><h3>Service bookings & allotments</h3><span className="g-chip">{bookings.length} total</span></div>
+            <div className="adm-table">
+              <div className="adm-tr bk head"><span>Client</span><span>Service</span><span>Specialist</span><span>Advance / Total</span><span>Phone</span><span>Status</span><span>Booked</span></div>
+              {bookings.map((b) => (
+                <div className="adm-tr bk" key={b.id}>
+                  <span className="adm-email">{b.email}</span>
+                  <span><b style={{ fontSize: 12.5 }}>{b.service_name}</b></span>
+                  <span>{b.member_name}</span>
+                  <span><b style={{ color: "var(--g-success)" }}>{inr(b.advance_amount)}</b> / {inr(b.price)}</span>
+                  <span>{b.phone || "—"}</span>
+                  <span>
+                    {b.status === "pending" ? <i className="g-dim">Awaiting payment</i> : (
+                      <select className="adm-stage" value={b.status} onChange={(e) => setBkStatus(b.id, e.target.value)}>
+                        {BK_STATUSES.map((st) => <option key={st} value={st}>{BK_LABEL[st]}</option>)}
+                      </select>
+                    )}
+                  </span>
+                  <span className="g-dim">{ago(b.created_at)}</span>
+                </div>
+              ))}
+              {bookings.length === 0 && <p className="g-dim" style={{ padding: 18 }}>No bookings yet.</p>}
+            </div>
+          </div>
+        )}
+
+        {/* ---- Inbox ---- */}
+        {view === "inbox" && (
+          <div className="adm-inbox">
+            <div className="g-card adm-threads">
+              <div className="g-card-h"><h3>Conversations</h3></div>
+              {threads.length === 0 && <p className="g-dim">No messages yet.</p>}
+              {threads.map((t) => (
+                <button key={t.user_id} className={`adm-thread ${thread?.user_id === t.user_id ? "on" : ""}`} onClick={() => setThread(t)}>
+                  <span className="bk-av">{(t.email || "?")[0].toUpperCase()}</span>
+                  <div className="adm-thread-body">
+                    <b>{t.email}</b>
+                    <span>{t.last?.sender === "user" ? "Them: " : "You: "}{(t.last?.body || "").slice(0, 44)}</span>
+                  </div>
+                  {t.needsReply && <span className="adm-needs">Reply</span>}
+                </button>
+              ))}
+            </div>
+            <div className="g-card adm-convo">
+              {!thread ? <div className="g-empty sm"><p>Select a conversation.</p></div> : (
+                <>
+                  <div className="g-card-h"><h3>{thread.email}</h3></div>
+                  <div className="g-thread adm-thread-msgs">
+                    {thread.messages.map((m) => (
+                      <div className={`g-bubble ${m.sender === "user" ? "them" : "me"}`} key={m.id}>
+                        {m.title && <b>{m.title}</b>}
+                        <p>{m.body}</p>
+                        <time>{new Date(m.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}</time>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="g-reply">
+                    <input value={tReply} onChange={(e) => setTReply(e.target.value)} onKeyDown={(e) => e.key === "Enter" && sendThreadReply()} placeholder={`Reply to ${thread.email}…`} />
+                    <button onClick={sendThreadReply}><I n="send" size={15} /></button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </main>
 
       {/* ---- Client detail drawer ---- */}

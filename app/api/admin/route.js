@@ -141,6 +141,46 @@ export async function POST(req) {
       return Response.json({ ok: true, message: data });
     }
 
+    /* ---- Service bookings (allotments) ---- */
+    if (action === "listBookings") {
+      const [bq, users] = await Promise.all([
+        admin.from("service_bookings").select("*").order("created_at", { ascending: false }).limit(500),
+        listAllUsers(admin),
+      ]);
+      const emailOf = Object.fromEntries(users.map((u) => [u.id, u.email]));
+      return Response.json({ bookings: (bq.data || []).map((b) => ({ ...b, email: emailOf[b.user_id] || b.user_id.slice(0, 8) })) });
+    }
+
+    if (action === "setBookingStatus") {
+      const { booking_id, status } = payload || {};
+      const allowed = ["paid", "confirmed", "completed", "cancelled"];
+      if (!booking_id || !allowed.includes(status)) return Response.json({ error: "Invalid payload" }, { status: 400 });
+      const { error } = await admin.from("service_bookings").update({ status }).eq("id", booking_id);
+      if (error) throw error;
+      return Response.json({ ok: true });
+    }
+
+    /* ---- Inbox: all message threads incl. customer replies ---- */
+    if (action === "listThreads") {
+      const [mq, users] = await Promise.all([
+        admin.from("admin_messages").select("*").order("created_at", { ascending: true }).limit(2000),
+        listAllUsers(admin),
+      ]);
+      const emailOf = Object.fromEntries(users.map((u) => [u.id, u.email]));
+      const byUser = {};
+      (mq.data || []).forEach((m) => {
+        (byUser[m.user_id] = byUser[m.user_id] || []).push(m);
+      });
+      const threads = Object.entries(byUser).map(([uid, msgs]) => ({
+        user_id: uid,
+        email: emailOf[uid] || uid.slice(0, 8),
+        messages: msgs,
+        last: msgs[msgs.length - 1],
+        needsReply: msgs[msgs.length - 1]?.sender === "user",
+      })).sort((a, b) => new Date(b.last.created_at) - new Date(a.last.created_at));
+      return Response.json({ threads });
+    }
+
     return Response.json({ error: "Unknown action" }, { status: 400 });
   } catch (e) {
     return Response.json({ error: e.message || "Admin request failed." }, { status: 500 });

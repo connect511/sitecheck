@@ -8,6 +8,7 @@ export default function AuthModal({ onClose, onAuthed }) {
   const [mode, setMode] = useState("login"); // login | signup
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
 
@@ -19,7 +20,7 @@ export default function AuthModal({ onClose, onAuthed }) {
     setBusy(true); setMsg("");
     try {
       if (mode === "signup") {
-        const { data, error } = await sb.auth.signUp({ email, password });
+        const { data, error } = await sb.auth.signUp({ email, password, options: { data: { phone: phone.trim() } } });
         if (error) throw error;
         if (data.session) { onAuthed?.(data.user); onClose?.(); return; }
         setMsg("Account created! Check your email to confirm, then log in.");
@@ -72,6 +73,11 @@ export default function AuthModal({ onClose, onAuthed }) {
 
           <label className="au2-label">Email</label>
           <div className="au2-input"><I n="mail" size={15} /><input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@store.com" autoComplete="email" /></div>
+
+          {!isLogin && (<>
+            <label className="au2-label">Phone</label>
+            <div className="au2-input"><I n="phone" size={15} /><input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Your phone number" autoComplete="tel" /></div>
+          </>)}
 
           <label className="au2-label">Password</label>
           <div className="au2-input"><I n="lock" size={15} /><input type="password" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={(e) => e.key === "Enter" && submit()} placeholder={isLogin ? "Your password" : "Min. 6 characters"} autoComplete={isLogin ? "current-password" : "new-password"} /></div>

@@ -1,4 +1,5 @@
 import { getAdmin, getUserFromToken } from "../../lib/supabaseAdmin";
+import { findMember } from "../../lib/servicesCatalog";
 
 export const runtime = "nodejs";
 
@@ -132,6 +133,72 @@ export async function POST(req) {
       }).select().single();
       if (error) throw error;
       return Response.json({ scan: data });
+    }
+
+    if (action === "bookService") {
+      const { service_key, member_id, phone, site_id } = payload || {};
+      const hit = findMember(service_key, member_id);
+      if (!hit) return Response.json({ error: "Invalid service selection." }, { status: 400 });
+      if (!phone || String(phone).replace(/\D/g, "").length < 10) return Response.json({ error: "A valid phone number is required." }, { status: 400 });
+
+      const appId = process.env.CASHFREE_APP_ID;
+      const secret = process.env.CASHFREE_SECRET_KEY;
+      if (!appId || !secret) return Response.json({ error: "Payments are not configured yet." }, { status: 503 });
+
+      // 1) create the booking row (pending)
+      const { data: booking, error: bErr } = await admin.from("service_bookings").insert({
+        user_id: user.id, site_id: site_id || null,
+        service_key, service_name: hit.service.name,
+        member_id, member_name: hit.member.name,
+        price: hit.member.price, advance_amount: hit.advance,
+        phone: String(phone).trim(), status: "pending",
+      }).select().single();
+      if (bErr) throw bErr;
+
+      // 2) create the Cashfree order for the 10% advance (amount fixed server-side)
+      const orderId = "ds_book_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
+      const base = process.env.APP_BASE_URL || "";
+      const body = {
+        order_id: orderId,
+        order_amount: hit.advance,
+        order_currency: "INR",
+        customer_details: {
+          customer_id: "cust_" + user.id.slice(0, 12),
+          customer_email: user.email || "guest@digistick.in",
+          customer_phone: String(phone).replace(/\D/g, "").slice(-10) || "9999999999",
+        },
+        order_meta: { return_url: base + "/dashboard?booking=" + booking.id + "&order_id={order_id}" },
+        order_note: "Advance (10%) — " + hit.service.name + " with " + hit.member.name,
+      };
+      const res = await fetch(cfBase() + "/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-api-version": "2023-08-01", "x-client-id": appId, "x-client-secret": secret },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        await admin.from("service_bookings").delete().eq("id", booking.id);
+        return Response.json({ error: data.message || "Could not start checkout." }, { status: 502 });
+      }
+      await admin.from("service_bookings").update({ order_id: orderId }).eq("id", booking.id);
+      return Response.json({ booking_id: booking.id, orderId, paymentSessionId: data.payment_session_id, amount: hit.advance, env: process.env.CASHFREE_ENV === "production" ? "production" : "sandbox" });
+    }
+
+    if (action === "confirmBooking") {
+      const { booking_id, orderId } = payload || {};
+      const { data: booking } = await admin.from("service_bookings").select("*").eq("id", booking_id).eq("user_id", user.id).single();
+      if (!booking) return Response.json({ error: "Booking not found." }, { status: 404 });
+      if (booking.status !== "pending") return Response.json({ ok: true, booking }); // already processed
+      if (booking.order_id && orderId && booking.order_id !== orderId) return Response.json({ error: "Order mismatch." }, { status: 400 });
+      const paid = await verifyCashfreePaid(booking.order_id || orderId);
+      if (!paid) return Response.json({ error: "Payment not verified yet. If money was deducted, it will reflect shortly — contact support otherwise." }, { status: 402 });
+      const { data: updated } = await admin.from("service_bookings").update({ status: "paid" }).eq("id", booking.id).select().single();
+      return Response.json({ ok: true, booking: updated });
+    }
+
+    if (action === "myBookings") {
+      const { data } = await admin.from("service_bookings").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
+      return Response.json({ bookings: data || [] });
     }
 
     if (action === "getReport") {
