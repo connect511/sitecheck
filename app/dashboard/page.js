@@ -12,7 +12,8 @@ const NAV = [
   ["Ads Strategy", "megaphone"], ["Competitors", "target"], ["Services", "briefcase"], ["Messages", "chat"],
   ["Growth Plan", "gift"], ["History", "chart"], ["Settings", "settings"],
 ];
-const MOBILE_NAV = [["Overview", "home", "Home"], ["Priority Fixes", "wrench", "Fixes"], ["Ads Strategy", "megaphone", "Ads"], ["App Stack", "layers", "Apps"], ["Settings", "settings", "Profile"]];
+const MOBILE_NAV = [["Overview", "home", "Home"], ["Priority Fixes", "wrench", "Fixes"], ["Services", "briefcase", "Services"], ["Messages", "chat", "Chat"]];
+const MORE_NAV = [["Theme Audit", "palette"], ["App Stack", "layers"], ["Ads Strategy", "megaphone"], ["Competitors", "target"], ["Growth Plan", "gift"], ["History", "chart"], ["Settings", "settings"]];
 
 /* Placeholder theme showcase — replace preview links + add real .zip assets before launch. */
 const THEMES = [
@@ -294,6 +295,7 @@ export default function Dashboard() {
   const [dailyBudget, setDailyBudget] = useState(500);
   const [bookedOk, setBookedOk] = useState(null);   // confirmed booking for green banner
   const [themeOrder, setThemeOrder] = useState(null); // paid theme order id
+  const [moreOpen, setMoreOpen] = useState(false);
   const configured = supabaseConfigured();
 
   useEffect(() => {
@@ -1169,10 +1171,29 @@ export default function Dashboard() {
         </>
       )}
 
+      {moreOpen && (
+        <div className="g-more-overlay" onClick={() => setMoreOpen(false)}>
+          <div className="g-more-sheet" onClick={(e) => e.stopPropagation()}>
+            <div className="g-more-handle" />
+            <div className="g-more-grid">
+              {MORE_NAV.map(([t, ic]) => (
+                <button key={t} className={tab === t ? "on" : ""} onClick={() => { setMoreOpen(false); go(t); }}>
+                  <span><I n={ic} size={19} /></span>{t}
+                  {["Theme Audit", "App Stack", "Ads Strategy", "History", "Settings"].includes(t) && !isPro && <i className="g-more-lock"><I n="lock" size={10} /></i>}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       <nav className="g-bottom">
         {MOBILE_NAV.map(([t, ic, lbl]) => (
-          <button key={t} className={tab === t ? "on" : ""} onClick={() => go(t)}><span><I n={ic} size={18} /></span>{lbl}</button>
+          <button key={t} className={tab === t ? "on" : ""} onClick={() => { setMoreOpen(false); go(t); }}>
+            <span className="g-bn-ic"><I n={ic} size={18} />{t === "Messages" && unread > 0 && <i className="g-bn-badge">{unread}</i>}</span>{lbl}
+          </button>
         ))}
+        <button className={moreOpen ? "on" : ""} onClick={() => setMoreOpen((o) => !o)}><span className="g-bn-ic"><I n="plus" size={18} /></span>More</button>
       </nav>
     </div>
   );
