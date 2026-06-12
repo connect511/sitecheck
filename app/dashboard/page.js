@@ -357,6 +357,15 @@ export default function Dashboard() {
     const { data } = await sb.from("admin_messages").select("*").order("created_at", { ascending: true });
     if (data) setInbox(data);
   }, []);
+  // Live message polling — new admin messages light up the Chat badge without a reload
+  useEffect(() => {
+    if (!user) return;
+    const id = setInterval(loadInbox, 25000);
+    const onVis = () => { if (!document.hidden) loadInbox(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { clearInterval(id); document.removeEventListener("visibilitychange", onVis); };
+  }, [user, loadInbox]);
+
   useEffect(() => {
     if (tab !== "Messages") return;
     const unread = inbox.filter((m) => !m.read_at && m.sender !== "user");
@@ -1212,7 +1221,7 @@ export default function Dashboard() {
 
       {activeSite && latest && (
         <>
-          <button className={`ai-fab ${aiOpen ? "open" : ""}`} onClick={() => setAiOpen((o) => !o)} aria-label="AI Growth Consultant"><I n={aiOpen ? "x" : "bot"} size={22} /></button>
+          {tab !== "Messages" && <button className={`ai-fab ${aiOpen ? "open" : ""}`} onClick={() => setAiOpen((o) => !o)} aria-label="AI Growth Consultant"><I n={aiOpen ? "x" : "bot"} size={22} /></button>}
           <Consultant open={aiOpen} onClose={() => setAiOpen(false)} isPro={isPro} context={chatContext} onUpgrade={() => { setAiOpen(false); unlockPro(activeSite.url); }} ask={aiAsk} onAsked={() => setAiAsk("")} />
         </>
       )}
