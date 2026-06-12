@@ -1,6 +1,7 @@
 import { getAdmin, getUserFromToken } from "../../lib/supabaseAdmin";
 import { findMember } from "../../lib/servicesCatalog";
 import { sendMail, tpl, inrFmt } from "../../lib/mailer";
+import { findTheme } from "../../lib/themesCatalog";
 
 export const runtime = "nodejs";
 
@@ -243,20 +244,41 @@ export async function POST(req) {
     }
 
     if (action === "confirmTheme") {
-      const { orderId } = payload || {};
+      const { orderId, themeId, quiet } = payload || {};
       if (!orderId || !orderId.includes("_theme_")) return Response.json({ error: "Invalid order." }, { status: 400 });
+      const theme = themeId ? findTheme(themeId) : null;
       const paid = await verifyCashfreePaid(orderId);
       if (!paid) return Response.json({ error: "Payment not verified yet." }, { status: 402 });
-      await sendMail({
-        to: user.email,
-        subject: "Payment received — your theme is ready to download",
-        html: tpl({
-          heading: "Your theme is ready 🎉",
-          body: `Payment confirmed — <b>₹3,999</b> &middot; Order ${orderId}.<br><br>Your conversion-ready theme is unlocked. Download it from your dashboard&rsquo;s <b>Theme Audit</b> tab, then upload it in Shopify under Online Store &rarr; Themes &rarr; Add theme.`,
-          ctaText: "Download my theme", ctaUrl: APP + "/dashboard",
-        }),
-      });
-      return Response.json({ ok: true });
+
+      // Signed download link from the private "themes" storage bucket (valid 7 days)
+      let url = null;
+      if (theme) {
+        const { data: signed } = await admin.storage.from("themes").createSignedUrl("digistick" + theme.id + ".zip", 60 * 60 * 24 * 7);
+        url = signed?.signedUrl || null;
+      }
+
+      if (!quiet) {
+        await sendMail({
+          to: user.email,
+          subject: theme ? `Your theme "${theme.name}" is here 🎉` : "Payment received — your theme is ready",
+          html: tpl({
+            heading: theme ? `${theme.name} is yours 🎉` : "Your theme is ready",
+            body: `Payment confirmed${theme ? ` — <b>${inrFmt(theme.price)}</b>` : ""} &middot; Order ${orderId}.<br><br>` +
+              (url
+                ? `Your theme zip is attached to this link (valid for 7 days):<br><br><a href="${url}" style="color:#2E60B4;font-weight:bold;">Download ${theme.name}.zip</a><br><br>`
+                : `Our team will email your theme file shortly.<br><br>`) +
+              `<b>Install:</b> Shopify admin &rarr; Online Store &rarr; Themes &rarr; Add theme &rarr; Upload zip. Need help? Reply from your dashboard &mdash; setup support is included.`,
+            ctaText: "Open my dashboard", ctaUrl: APP + "/dashboard",
+          }),
+        });
+        // Heads-up to Digistick
+        await sendMail({
+          to: process.env.SMTP_USER,
+          subject: `THEME SOLD: ${theme ? theme.name + " " + inrFmt(theme.price) : orderId} — ${user.email}`,
+          html: tpl({ heading: "New theme purchase", body: `${theme ? theme.name + " — " + inrFmt(theme.price) : ""}<br>Client: ${user.email}<br>Order: ${orderId}${url ? "" : "<br><b>NOTE: storage file missing — send manually!</b>"}`, ctaText: "Open admin", ctaUrl: APP + "/admin" }),
+        });
+      }
+      return Response.json({ ok: true, url, theme: theme ? { id: theme.id, name: theme.name } : null });
     }
 
     if (action === "getReport") {

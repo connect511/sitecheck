@@ -1,4 +1,5 @@
 import { THEME } from "../../lib/theme";
+import { findTheme } from "../../lib/themesCatalog";
 
 export const runtime = "nodejs";
 
@@ -6,7 +7,7 @@ export const runtime = "nodejs";
 // client can never tamper with the price. Supports two products:
 //   "report" → ₹799 fix-kit
 //   "theme"  → the CRO theme upsell (price from theme config)
-const PRICES = { report: 799, theme: THEME.price };
+const PRICES = { report: 799, theme: THEME.price }; // theme price is overridden per-theme below
 
 function cfBase() {
   return process.env.CASHFREE_ENV === "production"
@@ -25,14 +26,16 @@ export async function POST(req) {
       );
     }
 
-    const { url, customer, product, returnTo } = await req.json();
+    const { url, customer, product, returnTo, themeId } = await req.json();
     const kind = product === "theme" ? "theme" : "report";
-    const amount = PRICES[kind];
+    const themePick = kind === "theme" && themeId ? findTheme(themeId) : null;
+    if (kind === "theme" && themeId && !themePick) return Response.json({ error: "Unknown theme." }, { status: 400 });
+    const amount = (themePick ? themePick.price : PRICES[kind]);
     const orderId = "ds_" + kind + "_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8);
 
     const base = process.env.APP_BASE_URL || "";
     const ret = returnTo === "dashboard-theme"
-      ? base + "/dashboard?theme_order={order_id}"
+      ? base + "/dashboard?theme_order={order_id}" + (themePick ? "&tid=" + themePick.id : "")
       : returnTo === "dashboard"
       ? base + "/dashboard?order_id={order_id}&unlock=" + encodeURIComponent(url || "")
       : base + "/?order_id={order_id}&product=" + kind + "&audit=" + encodeURIComponent(url || "");
@@ -47,7 +50,7 @@ export async function POST(req) {
         customer_phone: customer?.phone || "9999999999",
       },
       order_meta: { return_url: ret },
-      order_note: (kind === "theme" ? "Digistick CRO Theme — " : "SiteCheck fix-kit — ") + (url || ""),
+      order_note: (kind === "theme" ? "Digistick Theme " + (themePick ? themePick.name + " — " : "— ") : "SiteCheck fix-kit — ") + (url || ""),
     };
 
     const res = await fetch(cfBase() + "/orders", {

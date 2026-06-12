@@ -5,6 +5,7 @@ import { getSupabase, supabaseConfigured } from "../lib/supabaseClient";
 import AuthModal from "../AuthModal";
 import I from "../lib/icons";
 import { SERVICES_CATALOG } from "../lib/servicesCatalog";
+import { THEMES_CATALOG, recommendThemes } from "../lib/themesCatalog";
 
 /* ============ Growth Workspace navigation ============ */
 const NAV = [
@@ -15,12 +16,6 @@ const NAV = [
 const MOBILE_NAV = [["Overview", "home", "Home"], ["Priority Fixes", "wrench", "Fixes"], ["Services", "briefcase", "Services"], ["Messages", "chat", "Chat"]];
 const MORE_NAV = [["Theme Audit", "palette"], ["App Stack", "layers"], ["Ads Strategy", "megaphone"], ["Competitors", "target"], ["Growth Plan", "gift"], ["History", "chart"], ["Settings", "settings"]];
 
-/* Placeholder theme showcase — replace preview links + add real .zip assets before launch. */
-const THEMES = [
-  { id: "velocity", name: "Velocity", tag: "Best for D2C", cls: "thm-v", preview: "https://themes.shopify.com/", desc: "High-converting all-rounder with urgency, trust badges and a sticky mobile cart.", features: ["Sticky add-to-cart", "Trust & COD badges", "Speed-optimized"], uplift: "+18-25% conversion uplift" },
-  { id: "momentum", name: "Momentum", tag: "Best for fashion", cls: "thm-m", preview: "https://themes.shopify.com/", desc: "Visual-first layout built for apparel and lifestyle brands that sell on imagery.", features: ["Lookbook galleries", "Size-guide ready", "Reviews built in"], uplift: "+15-20% conversion uplift" },
-  { id: "pulse", name: "Pulse", tag: "Best for single-product", cls: "thm-p", preview: "https://themes.shopify.com/", desc: "Long-form landing-page style theme made to convert cold traffic into buyers.", features: ["Exit-intent offer", "FAQ + social proof", "Email capture"], uplift: "+20-30% on cold traffic" },
-];
 
 
 /* ============ Helpers ============ */
@@ -294,7 +289,7 @@ export default function Dashboard() {
   const [reply, setReply] = useState("");
   const [dailyBudget, setDailyBudget] = useState(500);
   const [bookedOk, setBookedOk] = useState(null);   // confirmed booking for green banner
-  const [themeOrder, setThemeOrder] = useState(null); // paid theme order id
+  const [themeOrder, setThemeOrder] = useState(null); // { orderId, tid, name, url } after purchase
   const [moreOpen, setMoreOpen] = useState(false);
   const chatEndRef = useRef(null);
   useEffect(() => {
@@ -322,7 +317,16 @@ export default function Dashboard() {
   useEffect(() => {
     if (!active) return;
     try { setDone(JSON.parse(window.localStorage.getItem("ds_plan_" + active) || "{}")); } catch { setDone({}); }
-    try { setThemeOrder(window.localStorage.getItem("ds_theme_order_" + active) || null); } catch { setThemeOrder(null); }
+    try {
+      const raw = window.localStorage.getItem("ds_theme_order_" + active);
+      const saved = raw ? JSON.parse(raw) : null;
+      setThemeOrder(saved);
+      if (saved?.orderId && saved?.tid && !saved.url) {
+        api("confirmTheme", { orderId: saved.orderId, themeId: saved.tid, quiet: true }).then((r) => {
+          if (r?.url) setThemeOrder((t) => t ? { ...t, url: r.url } : t);
+        }).catch(() => {});
+      }
+    } catch { setThemeOrder(null); }
   }, [active]);
 
   // Pro upgrade popup — fires once per day, 20s after a free-plan store loads.
@@ -416,11 +420,17 @@ export default function Dashboard() {
     const themeOrderId = params.get("theme_order");
     if (themeOrderId && !scanQueuedRef.current) {
       scanQueuedRef.current = true;
+      const tid = params.get("tid") || "";
       window.history.replaceState({}, "", "/dashboard");
-      if (active) { try { window.localStorage.setItem("ds_theme_order_" + active, themeOrderId); } catch {} }
-      setThemeOrder(themeOrderId);
+      const rec = { orderId: themeOrderId, tid, name: tid };
+      setThemeOrder(rec);
       setTab("Theme Audit");
-      api("confirmTheme", { orderId: themeOrderId }).catch(() => {}); // sends the purchase email
+      (async () => {
+        const r = await api("confirmTheme", { orderId: themeOrderId, themeId: tid }).catch(() => null); // verifies + emails the zip link
+        const next = { orderId: themeOrderId, tid, name: r?.theme?.name || tid, url: r?.url || null };
+        setThemeOrder(next);
+        if (active) { try { window.localStorage.setItem("ds_theme_order_" + active, JSON.stringify(next)); } catch {} }
+      })();
       return;
     }
 
@@ -509,10 +519,10 @@ export default function Dashboard() {
     a.click();
     URL.revokeObjectURL(a.href);
   }
-  async function buyThemeNow() {
-    setBusy("checkout");
+  async function buyTheme(themeId) {
+    setBusy("theme-" + themeId);
     try {
-      const res = await fetch("/api/order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: activeSite.url, product: "theme", returnTo: "dashboard-theme" }) });
+      const res = await fetch("/api/order", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: activeSite.url, product: "theme", themeId, returnTo: "dashboard-theme" }) });
       const json = await res.json().catch(() => null);
       if (!res.ok || !json) throw new Error((json && json.error) || "Could not start checkout.");
       await loadCashfreeSDK();
@@ -820,8 +830,8 @@ export default function Dashboard() {
                 {themeOrder && (
                   <div className="g-success">
                     <span className="g-success-ic"><I n="check" size={16} /></span>
-                    <div><b>Theme unlocked — payment verified</b><p>Your conversion-ready theme is yours. Download it and upload in Shopify → Online Store → Themes → Add theme.</p></div>
-                    <a className="g-btn-success" href={"/api/theme-download?order_id=" + encodeURIComponent(themeOrder)} target="_blank" rel="noopener noreferrer"><I n="download" size={14} /> Download theme</a>
+                    <div><b>{themeOrder.name ? `Theme "${themeOrder.name}" unlocked — sent to your email` : "Theme unlocked — sent to your email"}</b><p>The download link is in your inbox (valid 7 days). Install via Shopify &rarr; Online Store &rarr; Themes &rarr; Add theme.</p></div>
+                    {themeOrder.url && <a className="g-btn-success" href={themeOrder.url} target="_blank" rel="noopener noreferrer"><I n="download" size={14} /> Download now</a>}
                   </div>
                 )}
                 <div className="g-sec-h"><h2>Theme audit</h2><p>How much your current theme is helping — or costing — your conversions.</p></div>
@@ -840,22 +850,25 @@ export default function Dashboard() {
                     ))}
                   </div>
                 </div>
-                <div className="g-card-h free"><h3>Upgrade to a conversion-ready theme</h3><span className="g-chip warn">Rs 3,999 · launch price</span></div>
-                <div className="g-themes">
-                  {THEMES.map((t) => (
-                    <div className="g-card g-theme" key={t.id}>
-                      <div className={`g-theme-thumb ${t.cls}`}><span>{t.tag}</span><b>{t.name}</b></div>
-                      <div className="g-theme-body">
-                        <p>{t.desc}</p>
-                        <div className="g-theme-uplift"><I n="trend" size={13} /> {t.uplift}</div>
-                        <ul className="g-list sm">{t.features.map((f) => <li key={f}>{f}</li>)}</ul>
-                        <div className="g-app-actions">
-                          <a className="g-btn-ghost dark" href={t.preview} target="_blank" rel="noopener noreferrer">Preview</a>
-                          {themeOrder ? <a className="g-btn-success sm-link" href={"/api/theme-download?order_id=" + encodeURIComponent(themeOrder)} target="_blank" rel="noopener noreferrer">Download</a> : <button className="g-btn-primary sm" onClick={buyThemeNow} disabled={busy === "checkout"}>{busy === "checkout" ? "Opening…" : "Buy ₹3,999"}</button>}
+                <div className="g-card-h free"><h3>Digistick theme marketplace</h3><span className="g-chip">20 themes · ₹3,999–₹6,999</span></div>
+                <p className="tm-note"><I n="shield" size={13} /> All themes below are <b>built by the Digistick team</b>. Previews show the design direction each build is inspired by — we do not sell or redistribute third-party themes; design ideas only, with our own code. Setup support included with every purchase.</p>
+                <div className="tm-grid">
+                  {THEMES_CATALOG.map((t) => {
+                    const rec = recommendThemes(latest.scores?.performance, conversion).includes(t.id);
+                    return (
+                      <div className={`g-card tm-tile ${rec ? "rec" : ""}`} key={t.id}>
+                        {rec && <span className="g-sv-rec">Recommended for you</span>}
+                        <div className={`tm-thumb ${t.grad}`}><b>{t.name}</b><span>{t.bestFor}</span></div>
+                        <div className="tm-body">
+                          <div className="tm-meta"><b>{inr(t.price)}</b><span className="tm-tags">{t.strengths.map((x) => <i key={x}>{x === "speed" ? "Fast" : x === "conversion" ? "High-CRO" : "Visual"}</i>)}</span></div>
+                          <div className="g-app-actions">
+                            <a className="g-btn-ghost dark" href={t.preview} target="_blank" rel="noopener noreferrer">Preview</a>
+                            <button className="g-btn-primary sm" onClick={() => buyTheme(t.id)} disabled={busy === "theme-" + t.id}>{busy === "theme-" + t.id ? "Opening…" : `Buy ${inr(t.price)}`}</button>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </>
               </MaybeBlur>
