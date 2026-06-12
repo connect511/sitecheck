@@ -1853,3 +1853,32 @@ body { background: var(--cream); color: var(--ink); font-family: var(--font); -w
 .tm-tags { display: flex; gap: 5px; }
 .tm-tags i { font-style: normal; font-size: 9px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; background: var(--g-bg); color: var(--g-muted); border-radius: 20px; padding: 4px 8px; }
 @media (max-width: 880px) { .tm-grid { grid-template-columns: 1fr 1fr; } .tm-thumb { height: 90px; } .tm-thumb b { font-size: 16px; } }
+
+/* v3.2 — interactive theme tiles + recommended badge fix */
+.tm-tile { transition: transform .18s ease, box-shadow .18s ease; }
+.tm-tile:hover { transform: translateY(-4px); box-shadow: 0 18px 44px rgba(21,32,58,.16); }
+.tm-thumb { position: relative; transition: filter .18s ease; }
+.tm-tile:hover .tm-thumb { filter: saturate(1.15) brightness(1.04); }
+.tm-rec { position: absolute; top: 9px; left: 50%; transform: translateX(-50%); background: var(--g-accent); color: #3a2e12; font-size: 9.5px; font-weight: 900; letter-spacing: .4px; text-transform: uppercase; border-radius: 20px; padding: 5px 11px; white-space: nowrap; box-shadow: 0 4px 14px rgba(0,0,0,.22); animation: recpulse 2.2s ease-in-out infinite; }
+@keyframes recpulse { 0%, 100% { transform: translateX(-50%) scale(1); } 50% { transform: translateX(-50%) scale(1.06); } }
+
+/* v3.2 — chat: attachments + counts */
+.g-chat-back { display: none; background: var(--g-bg); border: none; border-radius: 10px; width: 34px; height: 34px; align-items: center; justify-content: center; cursor: pointer; color: var(--g-ink); flex-shrink: 0; font-family: var(--font); }
+.g-chat-count { margin-left: auto; font-size: 10.5px; font-weight: 800; color: var(--g-muted); background: var(--g-bg); border-radius: 20px; padding: 5px 10px; white-space: nowrap; }
+.g-attach-btn { width: 42px; height: 42px; border-radius: 50%; border: 1.5px solid var(--g-line); background: var(--g-card); color: var(--g-muted); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; font-family: var(--font); font-size: 15px; }
+.g-attach-btn:hover { border-color: var(--g-primary); color: var(--g-primary); }
+.g-attach-chip { display: inline-flex; align-items: center; gap: 7px; font-size: 11.5px; font-weight: 700; color: var(--g-ink); background: var(--g-bg); border: 1px dashed var(--g-line); border-radius: 20px; padding: 6px 11px; margin: 8px 0 0; max-width: 100%; overflow: hidden; }
+.g-attach-chip button { background: none; border: none; cursor: pointer; color: var(--g-muted); font-size: 11px; padding: 0 0 0 2px; }
+.g-bubble-file { display: inline-flex; align-items: center; gap: 7px; margin-top: 8px; font-size: 12px; font-weight: 700; color: inherit; background: rgba(255,255,255,.16); border: 1px solid rgba(255,255,255,.25); border-radius: 12px; padding: 8px 12px; text-decoration: none; }
+.g-bubble.them .g-bubble-file { background: var(--g-card); border-color: var(--g-line); color: var(--g-primary); }
+.g-bubble-img { display: block; margin-top: 8px; }
+.g-bubble-img img { max-width: 220px; max-height: 220px; border-radius: 12px; display: block; }
+
+@media (max-width: 880px) {
+  /* Full-screen fixed messenger (reference style) */
+  .g-chatbox { position: fixed; top: 0; left: 0; right: 0; bottom: 64px; z-index: 40; height: auto; max-height: none; border-radius: 0; border: none; padding: 12px 14px calc(12px + env(safe-area-inset-bottom, 0)); display: flex; flex-direction: column; }
+  .g-chat-back { display: flex; }
+  .g-thread { flex: 1; min-height: 0; overflow-y: auto; }
+  .g-reply { position: static; }
+  .g-chat-count { font-size: 9.5px; padding: 4px 8px; }
+}

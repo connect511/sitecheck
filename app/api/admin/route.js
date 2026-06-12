@@ -132,7 +132,7 @@ export async function POST(req) {
 
     /* ---- Push a message / recommendation to a client ---- */
     if (action === "sendMessage") {
-      const { user_id, site_id, title, body, kind } = payload || {};
+      const { user_id, site_id, title, body, kind, file_url, file_name } = payload || {};
       if (!user_id || !title?.trim() || !body?.trim()) return Response.json({ error: "user_id, title and body are required" }, { status: 400 });
       const { data, error } = await admin.from("admin_messages").insert({
         user_id, site_id: site_id || null, title: title.trim(), body: body.trim(),

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { getSupabase, supabaseConfigured } from "../lib/supabaseClient";
 import AuthModal from "../AuthModal";
 import I from "../lib/icons";
@@ -106,15 +106,26 @@ export default function Admin() {
     await api("setBookingStatus", { booking_id: id, status });
     setBookings((bs) => bs.map((b) => b.id === id ? { ...b, status } : b));
   }
+  const admFileRef = useRef(null);
+  const [admFile, setAdmFile] = useState(null);
   async function sendThreadReply() {
     const t = tReply.trim();
-    if (!t || !thread) return;
-    const r = await api("sendMessage", { user_id: thread.user_id, title: "", body: t, kind: "note" });
+    if ((!t && !admFile) || !thread) return;
+    let file_url = null, file_name = null;
+    if (admFile) {
+      const sb = getSupabase();
+      const path = `admin/${Date.now()}_${admFile.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      const { error: upErr } = await sb.storage.from("chat-files").upload(path, admFile);
+      if (upErr) { alert("Upload failed: " + upErr.message); return; }
+      const { data: pub } = sb.storage.from("chat-files").getPublicUrl(path);
+      file_url = pub?.publicUrl || null; file_name = admFile.name;
+    }
+    const r = await api("sendMessage", { user_id: thread.user_id, title: "", body: t || (file_name ? "📎 " + file_name : ""), kind: "note", file_url, file_name });
     if (r?.ok) {
       const m = r.message;
       setThread((th) => ({ ...th, messages: [...th.messages, m], last: m, needsReply: false }));
       setThreads((ts) => ts.map((x) => x.user_id === thread.user_id ? { ...x, messages: [...x.messages, m], last: m, needsReply: false } : x));
-      setTReply("");
+      setTReply(""); setAdmFile(null);
     } else alert(r?.error || "Could not send.");
   }
   async function logout() { const sb = getSupabase(); await sb?.auth.signOut(); setUser(null); setStats(null); }
@@ -264,12 +275,15 @@ export default function Admin() {
                       <div className={`g-bubble ${m.sender === "user" ? "them" : "me"}`} key={m.id}>
                         {m.title && <b>{m.title}</b>}
                         <p>{m.body}</p>
+                        {m.file_url && <a href={m.file_url} target="_blank" rel="noopener noreferrer" className="g-bubble-file"><span>📎</span> {m.file_name || "Attachment"}</a>}
                         <time>{new Date(m.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}</time>
                       </div>
                     ))}
                   </div>
                   <div className="g-reply">
-                    <input value={tReply} onChange={(e) => setTReply(e.target.value)} onKeyDown={(e) => e.key === "Enter" && sendThreadReply()} placeholder={`Reply to ${thread.email}…`} />
+                    <input type="file" ref={admFileRef} style={{ display: "none" }} onChange={(e) => { const f = e.target.files?.[0]; if (f) setAdmFile(f); e.target.value = ""; }} />
+                    <button className="g-attach-btn" onClick={() => admFileRef.current?.click()} title={admFile ? admFile.name : "Attach file"} style={admFile ? { borderColor: "var(--g-primary)", color: "var(--g-primary)" } : undefined}>📎</button>
+                    <input value={tReply} onChange={(e) => setTReply(e.target.value)} onKeyDown={(e) => e.key === "Enter" && sendThreadReply()} placeholder={admFile ? `Attach: ${admFile.name}` : `Reply to ${thread.email}…`} />
                     <button onClick={sendThreadReply}><I n="send" size={15} /></button>
                   </div>
                 </>

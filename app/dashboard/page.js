@@ -292,6 +292,9 @@ export default function Dashboard() {
   const [themeOrder, setThemeOrder] = useState(null); // { orderId, tid, name, url } after purchase
   const [moreOpen, setMoreOpen] = useState(false);
   const chatEndRef = useRef(null);
+  const chatFileRef = useRef(null);
+  const [chatFile, setChatFile] = useState(null);
+  const [chatSending, setChatSending] = useState(false);
   useEffect(() => {
     if (tab === "Messages") setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "auto", block: "end" }), 60);
   }, [tab, inbox]);
@@ -545,11 +548,24 @@ export default function Dashboard() {
   }
   async function sendReply() {
     const t = reply.trim();
-    if (!t) return;
+    if (!t && !chatFile) return;
     const sb = getSupabase(); if (!sb || !user) return;
-    const { data, error } = await sb.from("admin_messages").insert({ user_id: user.id, title: "", body: t, kind: "note", sender: "user", read_at: new Date().toISOString() }).select().single();
-    if (error) { alert("Could not send — try again. (If this keeps failing, the v19 database update may not be applied.)"); return; }
-    setInbox((ms) => [...ms, data]); setReply("");
+    setChatSending(true);
+    let file_url = null, file_name = null;
+    try {
+      if (chatFile) {
+        const path = `${user.id}/${Date.now()}_${chatFile.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+        const { error: upErr } = await sb.storage.from("chat-files").upload(path, chatFile);
+        if (upErr) throw upErr;
+        const { data: pub } = sb.storage.from("chat-files").getPublicUrl(path);
+        file_url = pub?.publicUrl || null; file_name = chatFile.name;
+      }
+      const { data, error } = await sb.from("admin_messages").insert({ user_id: user.id, title: "", body: t || (file_name ? "📎 " + file_name : ""), kind: "note", sender: "user", read_at: new Date().toISOString(), file_url, file_name }).select().single();
+      if (error) throw error;
+      setInbox((ms) => [...ms, data]); setReply(""); setChatFile(null);
+    } catch {
+      alert("Could not send — try again. (If this keeps failing, the v20 database update may not be applied.)");
+    } finally { setChatSending(false); }
   }
 
   if (loading) return <div className="gcc"><div className="gcc-load">Loading your Growth Workspace…</div></div>;
@@ -857,8 +873,7 @@ export default function Dashboard() {
                     const rec = recommendThemes(latest.scores?.performance, conversion).includes(t.id);
                     return (
                       <div className={`g-card tm-tile ${rec ? "rec" : ""}`} key={t.id}>
-                        {rec && <span className="g-sv-rec">Recommended for you</span>}
-                        <div className={`tm-thumb ${t.grad}`}><b>{t.name}</b><span>{t.bestFor}</span></div>
+                        <div className={`tm-thumb ${t.grad}`}>{rec && <span className="tm-rec">★ Recommended for you</span>}<b>{t.name}</b><span>{t.bestFor}</span></div>
                         <div className="tm-body">
                           <div className="tm-meta"><b>{inr(t.price)}</b><span className="tm-tags">{t.strengths.map((x) => <i key={x}>{x === "speed" ? "Fast" : x === "conversion" ? "High-CRO" : "Visual"}</i>)}</span></div>
                           <div className="g-app-actions">
@@ -1029,8 +1044,10 @@ export default function Dashboard() {
                 <div className="g-sec-h chat-hide"><h2>Messages</h2><p>Chat with the Digistick team — recommendations, offers, and your replies.</p></div>
                 <div className="g-card g-chatbox">
                   <div className="g-chat-head">
+                    <button className="g-chat-back" onClick={() => go("Overview")} aria-label="Back"><I n="back" size={18} /></button>
                     <span className="bk-av">DS</span>
                     <div><b>Digistick Team</b><span className="g-chat-status"><i /> Online · replies within a few hours</span></div>
+                    <span className="g-chat-count">{inbox.length} messages</span>
                   </div>
                   <div className="g-thread">
                     {inbox.length === 0 && <div className="g-empty sm"><p>No messages yet. Say hi — our team replies within a few hours.</p></div>}
@@ -1039,14 +1056,20 @@ export default function Dashboard() {
                         {m.sender !== "user" && m.title && <div className="g-bubble-head"><span className="g-inbox-kind">{m.kind === "offer" ? "Offer" : m.kind === "recommendation" ? "Recommendation" : "Digistick"}</span></div>}
                         {m.sender !== "user" && m.title && <b>{m.title}</b>}
                         <p>{m.body}</p>
+                        {m.file_url && (/\.(png|jpe?g|gif|webp)$/i.test(m.file_name || "")
+                          ? <a href={m.file_url} target="_blank" rel="noopener noreferrer" className="g-bubble-img"><img src={m.file_url} alt={m.file_name || "attachment"} /></a>
+                          : <a href={m.file_url} target="_blank" rel="noopener noreferrer" className="g-bubble-file"><I n="download" size={13} /> {m.file_name || "Attachment"}</a>)}
                         <time>{new Date(m.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}</time>
                       </div>
                     ))}
                     <div ref={chatEndRef} />
                   </div>
+                  {chatFile && <div className="g-attach-chip"><I n="download" size={12} /> {chatFile.name}<button onClick={() => setChatFile(null)} aria-label="Remove">✕</button></div>}
                   <div className="g-reply">
+                    <input type="file" ref={chatFileRef} style={{ display: "none" }} accept="image/*,.pdf,.zip,.csv,.doc,.docx,.xls,.xlsx" onChange={(e) => { const f = e.target.files?.[0]; if (f) { if (f.size > 10 * 1024 * 1024) { alert("Max file size is 10 MB."); } else setChatFile(f); } e.target.value = ""; }} />
+                    <button className="g-attach-btn" onClick={() => chatFileRef.current?.click()} aria-label="Attach file"><I n="plus" size={17} /></button>
                     <input value={reply} onChange={(e) => setReply(e.target.value)} onKeyDown={(e) => e.key === "Enter" && sendReply()} placeholder="Type your message…" />
-                    <button onClick={sendReply}><I n="send" size={15} /></button>
+                    <button onClick={sendReply} disabled={chatSending}><I n="send" size={15} /></button>
                   </div>
                 </div>
               </>
