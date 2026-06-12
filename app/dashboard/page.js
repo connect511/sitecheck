@@ -296,6 +296,10 @@ export default function Dashboard() {
   const [bookedOk, setBookedOk] = useState(null);   // confirmed booking for green banner
   const [themeOrder, setThemeOrder] = useState(null); // paid theme order id
   const [moreOpen, setMoreOpen] = useState(false);
+  const chatEndRef = useRef(null);
+  useEffect(() => {
+    if (tab === "Messages") setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: "auto", block: "end" }), 60);
+  }, [tab, inbox]);
   const configured = supabaseConfigured();
 
   useEffect(() => {
@@ -1008,8 +1012,12 @@ export default function Dashboard() {
             {/* ============ MESSAGES ============ */}
             {tab === "Messages" && (
               <>
-                <div className="g-sec-h"><h2>Messages</h2><p>Chat with the Digistick team — recommendations, offers, and your replies.</p></div>
+                <div className="g-sec-h chat-hide"><h2>Messages</h2><p>Chat with the Digistick team — recommendations, offers, and your replies.</p></div>
                 <div className="g-card g-chatbox">
+                  <div className="g-chat-head">
+                    <span className="bk-av">DS</span>
+                    <div><b>Digistick Team</b><span className="g-chat-status"><i /> Online · replies within a few hours</span></div>
+                  </div>
                   <div className="g-thread">
                     {inbox.length === 0 && <div className="g-empty sm"><p>No messages yet. Say hi — our team replies within a few hours.</p></div>}
                     {inbox.map((m) => (
@@ -1020,9 +1028,10 @@ export default function Dashboard() {
                         <time>{new Date(m.created_at).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" })}</time>
                       </div>
                     ))}
+                    <div ref={chatEndRef} />
                   </div>
                   <div className="g-reply">
-                    <input value={reply} onChange={(e) => setReply(e.target.value)} onKeyDown={(e) => e.key === "Enter" && sendReply()} placeholder="Write a reply to the Digistick team…" />
+                    <input value={reply} onChange={(e) => setReply(e.target.value)} onKeyDown={(e) => e.key === "Enter" && sendReply()} placeholder="Type your message…" />
                     <button onClick={sendReply}><I n="send" size={15} /></button>
                   </div>
                 </div>
