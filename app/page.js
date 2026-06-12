@@ -991,7 +991,7 @@ export default function Home() {
         <div className="f-tag">Digital marketing &amp; creative agency · Noida</div>
         <a className="btn-yellow" href="https://digistick.in" target="_blank" rel="noopener noreferrer" style={{ width: "auto", display: "inline-block", padding: "13px 32px" }}>Book a free strategy call</a>
         <div className="f-small">SITECHECK · BY DIGISTICK · DATA FROM GOOGLE LIGHTHOUSE &amp; LIVE PAGE PARSE</div>
-        <div className="f-legal"><a href="/privacy">Privacy Policy</a> · <a href="/terms">Terms of Service</a> · © {new Date().getFullYear()} Digistick Services Pvt Ltd</div>
+        <div className="f-legal"><a href="/contact">Contact Us</a> · <a href="/terms">Terms &amp; Conditions</a> · <a href="/refunds">Refunds &amp; Cancellations</a> · <a href="/privacy">Privacy Policy</a> · © {new Date().getFullYear()} Digistick Services Pvt Ltd</div>
       </footer>
 
       {authOpen && (
