@@ -1,7 +1,12 @@
 import { getAdmin, getUserFromToken } from "../../lib/supabaseAdmin";
 import { findMember } from "../../lib/servicesCatalog";
+import { sendMail, tpl, inrFmt } from "../../lib/mailer";
 
 export const runtime = "nodejs";
+
+const APP = process.env.APP_BASE_URL || "https://sitecheck.digistick.in";
+
+
 
 function cfBase() {
   return process.env.CASHFREE_ENV === "production"
@@ -123,6 +128,17 @@ export async function POST(req) {
         await admin.from("sites").update({ is_pro: true }).eq("id", site.id).eq("user_id", user.id);
       }
       if (site) await admin.from("reports").insert({ user_id: user.id, site_id: site.id, payload: report || {} });
+
+      // Purchase confirmation email (never blocks the unlock)
+      await sendMail({
+        to: user.email,
+        subject: "Payment received — your Growth Plan is unlocked",
+        html: tpl({
+          heading: "Your Growth Plan is unlocked 🎉",
+          body: `Payment confirmed for <b>${clean}</b>.<br><br>You now have full Pro access: written fixes, the install-ready Shopify file, your 14-day plan, Theme Audit, App Stack, Ads Strategy, score history and the AI Growth Consultant.<br><br><b>Amount paid:</b> ₹799 &middot; Order ${orderId}`,
+          ctaText: "Open my Growth Plan", ctaUrl: APP + "/dashboard",
+        }),
+      });
       return Response.json({ ok: true, pro: true });
     }
 
@@ -193,12 +209,54 @@ export async function POST(req) {
       const paid = await verifyCashfreePaid(booking.order_id || orderId);
       if (!paid) return Response.json({ error: "Payment not verified yet. If money was deducted, it will reflect shortly — contact support otherwise." }, { status: 402 });
       const { data: updated } = await admin.from("service_bookings").update({ status: "paid" }).eq("id", booking.id).select().single();
+
+      // Confirmation to the customer
+      await sendMail({
+        to: user.email,
+        subject: `Booking confirmed — ${booking.service_name}`,
+        html: tpl({
+          heading: "Your booking is confirmed ✓",
+          body: `<b>${booking.service_name}</b> with <b>${booking.member_name}</b> is locked in.<br><br>
+                 <b>Advance paid:</b> ${inrFmt(booking.advance_amount)} (30%)<br>
+                 <b>Total service price:</b> ${inrFmt(booking.price)}<br>
+                 <b>Order:</b> ${booking.order_id}<br><br>
+                 Our team will call you on <b>${booking.phone}</b> within 24 hours for the kickoff. The advance is fully adjustable against your final invoice.`,
+          ctaText: "View my bookings", ctaUrl: APP + "/dashboard",
+        }),
+      });
+      // Heads-up to the Digistick team inbox
+      await sendMail({
+        to: process.env.SMTP_USER,
+        subject: `NEW BOOKING: ${booking.service_name} — ${user.email}`,
+        html: tpl({
+          heading: "New service booking",
+          body: `<b>${booking.service_name}</b> with ${booking.member_name}<br>Client: ${user.email}<br>Phone: ${booking.phone}<br>Advance: ${inrFmt(booking.advance_amount)} / Total: ${inrFmt(booking.price)}<br>Order: ${booking.order_id}`,
+          ctaText: "Open admin panel", ctaUrl: APP + "/admin",
+        }),
+      });
       return Response.json({ ok: true, booking: updated });
     }
 
     if (action === "myBookings") {
       const { data } = await admin.from("service_bookings").select("*").eq("user_id", user.id).order("created_at", { ascending: false });
       return Response.json({ bookings: data || [] });
+    }
+
+    if (action === "confirmTheme") {
+      const { orderId } = payload || {};
+      if (!orderId || !orderId.includes("_theme_")) return Response.json({ error: "Invalid order." }, { status: 400 });
+      const paid = await verifyCashfreePaid(orderId);
+      if (!paid) return Response.json({ error: "Payment not verified yet." }, { status: 402 });
+      await sendMail({
+        to: user.email,
+        subject: "Payment received — your theme is ready to download",
+        html: tpl({
+          heading: "Your theme is ready 🎉",
+          body: `Payment confirmed — <b>₹3,999</b> &middot; Order ${orderId}.<br><br>Your conversion-ready theme is unlocked. Download it from your dashboard&rsquo;s <b>Theme Audit</b> tab, then upload it in Shopify under Online Store &rarr; Themes &rarr; Add theme.`,
+          ctaText: "Download my theme", ctaUrl: APP + "/dashboard",
+        }),
+      });
+      return Response.json({ ok: true });
     }
 
     if (action === "getReport") {

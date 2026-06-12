@@ -1,4 +1,5 @@
 import { getAdmin, getUserFromToken } from "../../lib/supabaseAdmin";
+import { sendMail, tpl } from "../../lib/mailer";
 
 export const runtime = "nodejs";
 
@@ -138,6 +139,21 @@ export async function POST(req) {
         kind: ["note", "recommendation", "offer"].includes(kind) ? kind : "note",
       }).select().single();
       if (error) throw error;
+
+      // Email notification to the client (best-effort)
+      const { data: target } = await admin.auth.admin.getUserById(user_id);
+      if (target?.user?.email) {
+        const preview = body.trim().slice(0, 220) + (body.trim().length > 220 ? "…" : "");
+        await sendMail({
+          to: target.user.email,
+          subject: title?.trim() ? `Digistick: ${title.trim()}` : "New message from the Digistick team",
+          html: tpl({
+            heading: title?.trim() || "You have a new message",
+            body: `${preview.replace(/\n/g, "<br>")}<br><br>Reply to us right from your dashboard — we&rsquo;ll get back within a few hours.`,
+            ctaText: "Open Messages", ctaUrl: (process.env.APP_BASE_URL || "https://sitecheck.digistick.in") + "/dashboard",
+          }),
+        });
+      }
       return Response.json({ ok: true, message: data });
     }
 

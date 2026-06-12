@@ -420,6 +420,7 @@ export default function Dashboard() {
       if (active) { try { window.localStorage.setItem("ds_theme_order_" + active, themeOrderId); } catch {} }
       setThemeOrder(themeOrderId);
       setTab("Theme Audit");
+      api("confirmTheme", { orderId: themeOrderId }).catch(() => {}); // sends the purchase email
       return;
     }
 
