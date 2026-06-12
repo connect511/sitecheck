@@ -5,6 +5,12 @@
 export const ADVANCE_PCT = 0.30;
 
 export const SERVICES_CATALOG = [
+  /* TEST SERVICE — for live payment verification. DELETE this block before public launch. */
+  { key: "test", ic: "shield", cls: "sv-dark", name: "Test Service (₹1)", start: 1, unit: "test",
+    desc: "Internal test — verifies the live payment gateway end to end. Do not use as a customer.",
+    members: [
+      { id: "test-1", name: "Test Specialist", role: "Payment Gateway Check", rating: 5.0, jobs: 1, days: "instant", price: 1 },
+    ] },
   { key: "speed", ic: "zap", cls: "sv-blue", name: "Store Speed Optimization", start: 2999, unit: "one-time",
     desc: "We take your Performance score above 85 — images, scripts, theme code, the works.",
     members: [
@@ -107,5 +113,5 @@ export function findMember(serviceKey, memberId) {
   if (!svc) return null;
   const member = svc.members.find((m) => m.id === memberId);
   if (!member) return null;
-  return { service: svc, member, advance: Math.round(member.price * ADVANCE_PCT) };
+  return { service: svc, member, advance: Math.max(1, Math.round(member.price * ADVANCE_PCT)) };
 }
