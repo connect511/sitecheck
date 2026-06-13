@@ -5,7 +5,7 @@ A free website audit tool. Visitors paste a URL and get an instant diagnostic ac
 lead-generation funnel into Digistick's services.
     
 ## What it does  
- 
+
 - **Health scores** (Performance / SEO / Accessibility / Best Practices) via Google Lighthouse
 - **Core Web Vitals** (LCP, FCP, CLS, TBT, Speed Index)
 - **On-page SEO & technical checks** — title, meta description, H1, alt text, canonical,
