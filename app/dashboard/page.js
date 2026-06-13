@@ -1,4 +1,5 @@
 "use client";
+import { track } from "../lib/pixel";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { getSupabase, supabaseConfigured } from "../lib/supabaseClient";
@@ -419,6 +420,7 @@ export default function Dashboard() {
     const unlockUrl = params.get("unlock");
     if (orderId && unlockUrl && !scanQueuedRef.current) {
       scanQueuedRef.current = true;
+      track("Purchase", { value: 799, currency: "INR", content_name: "Growth Plan" });
       window.history.replaceState({}, "", "/dashboard");
       (async () => {
         setBusy("unlocking");
@@ -434,6 +436,7 @@ export default function Dashboard() {
     if (themeOrderId && !scanQueuedRef.current) {
       scanQueuedRef.current = true;
       const tid = params.get("tid") || "";
+      track("Purchase", { value: 0, currency: "INR", content_name: "Theme " + (params.get("tid") || ""), content_type: "theme" });
       window.history.replaceState({}, "", "/dashboard");
       const rec = { orderId: themeOrderId, tid, name: tid };
       setThemeOrder(rec);
@@ -450,6 +453,7 @@ export default function Dashboard() {
     const bookingId = params.get("booking");
     if (bookingId && orderId && !scanQueuedRef.current) {
       scanQueuedRef.current = true;
+      track("Purchase", { currency: "INR", content_name: "Service Booking", content_type: "service" });
       window.history.replaceState({}, "", "/dashboard");
       (async () => {
         setBusy("unlocking");

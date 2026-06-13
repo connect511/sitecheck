@@ -1,4 +1,5 @@
 "use client";
+import { track } from "./lib/pixel";
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { THEME } from "./lib/theme";
@@ -381,6 +382,7 @@ export default function Home() {
               headers: { "Content-Type": "application/json", Authorization: "Bearer " + tok },
               body: JSON.stringify({ action: "unlockPro", payload: { url: auditUrl, report: json, orderId } }),
             });
+            track("Purchase", { value: 799, currency: "INR", content_name: "Growth Plan", content_type: "product" });
           }
         }
       } catch { /* not logged in or supabase off — report still shows on page */ }
@@ -448,6 +450,7 @@ export default function Home() {
   // Actual scan — runs after auth (or immediately if already logged in / preview).
   async function doScan(targetUrl) {
     setLoading(true); setError(""); setData(null); setPremium(null); setMsgIdx(0);
+    track("Lead", { content_name: "Free Scan", content_category: "scan" });
     document.getElementById("tool")?.scrollIntoView({ behavior: "smooth" });
     try {
       const res = await fetch("/api/audit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ url: targetUrl }) });
@@ -1000,6 +1003,7 @@ export default function Home() {
           onAuthed={async (u) => {
             setUser(u);
             setAuthOpen(false);
+            track("CompleteRegistration", { content_name: "Account", status: true });
             // Go straight to the dashboard and let it run the scan internally.
             const target = pendingUrl || url;
             if (target) { window.location.href = "/dashboard?scan=" + encodeURIComponent(target); }
