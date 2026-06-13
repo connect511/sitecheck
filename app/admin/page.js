@@ -128,6 +128,23 @@ export default function Admin() {
       setTReply(""); setAdmFile(null);
     } else alert(r?.error || "Could not send.");
   }
+  function exportCSV() {
+    const rows = [["Email", "Phone", "Name", "Stores", "Plan", "Lead stage", "Scans", "Messages", "Verified", "Signed up"]];
+    clients.forEach((c) => rows.push([
+      c.email || "", c.phone || "", c.name || "",
+      c.sites.map((s) => hostOf(s.url)).join(" | "),
+      c.is_pro ? "PRO" : "Free",
+      c.sites[0]?.lead_status || "new",
+      c.scans, c.messages, c.verified ? "yes" : "no",
+      new Date(c.created_at).toLocaleDateString("en-IN"),
+    ]));
+    const csv = rows.map((r) => r.map((x) => `"${String(x).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `digistick-clients-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+  }
   async function logout() { const sb = getSupabase(); await sb?.auth.signOut(); setUser(null); setStats(null); }
 
   /* ---- Gates ---- */
@@ -169,6 +186,7 @@ export default function Admin() {
           <div className="adm-stats">
             {[
               ["users", stats.users, "Total clients", `+${stats.newUsers7d} this week`],
+              ["chat", stats.withPhone ?? 0, "Phone numbers", `${stats.verified ?? 0} verified emails`],
               ["store", stats.sites, "Stores tracked", `${stats.scans} scans run`],
               ["star", stats.proSites, "Pro unlocks", `${stats.conversion}% conversion`],
               ["money", inr(stats.revenue), "Revenue (est.)", `${stats.messagesSent} messages sent`],
@@ -194,12 +212,21 @@ export default function Admin() {
               <option value="all">All stages</option>
               {STAGES.map((s) => <option key={s} value={s}>{STAGE_LABEL[s]}</option>)}
             </select>
+            <button className="adm-export" onClick={exportCSV} title="Download all clients as CSV">⬇ Export CSV</button>
           </div>
           <div className="adm-table">
-            <div className="adm-tr head"><span>Client</span><span>Stores</span><span>Score</span><span>Plan</span><span>Lead stage</span><span>Last active</span><span></span></div>
+            <div className="adm-tr head"><span>Client</span><span>Contact</span><span>Stores</span><span>Score</span><span>Plan</span><span>Lead stage</span><span>Last active</span><span></span></div>
             {shown.map((c) => (
               <div className="adm-tr" key={c.id}>
-                <span className="adm-email">{c.email || c.id.slice(0, 8)}<i>{c.scans} scans · {c.messages} msgs</i></span>
+                <span className="adm-email">{c.email || c.id.slice(0, 8)}<i>{c.scans} scans · {c.messages} msgs{c.verified ? "" : " · unverified"}</i></span>
+                <span className="adm-contact">
+                  {c.phone ? (
+                    <>
+                      <a href={`https://wa.me/${String(c.phone).replace(/[^0-9]/g, "")}`} target="_blank" rel="noopener noreferrer" className="adm-wa" title="WhatsApp">WA</a>
+                      <a href={`tel:${c.phone}`} className="adm-phone-link" title="Call">{c.phone}</a>
+                    </>
+                  ) : <i className="g-dim">no phone</i>}
+                </span>
                 <span className="adm-sites">{c.sites.length ? c.sites.map((s) => <em key={s.id}>{hostOf(s.url)}</em>) : <i className="g-dim">no store yet</i>}</span>
                 <span>{c.sites[0] ? <b style={{ color: scoreColor(c.sites[0].latest_score) }}>{c.sites[0].latest_score ?? "—"}</b> : "—"}</span>
                 <span>{c.is_pro ? <b className="adm-pro">PRO</b> : <i className="g-dim">Free</i>}</span>

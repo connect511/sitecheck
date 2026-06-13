@@ -75,8 +75,11 @@ export async function POST(req) {
           return {
             id: u.id,
             email: u.email,
+            phone: u.user_metadata?.phone || u.phone || u.user_metadata?.phone_number || null,
+            name: u.user_metadata?.name || u.user_metadata?.full_name || null,
             created_at: u.created_at,
             last_activity: lastActivity,
+            verified: !!u.email_confirmed_at,
             sites: uSites.map((s) => ({ id: s.id, url: s.url, is_pro: s.is_pro, lead_status: s.lead_status || "new", latest_score: scans.find((x) => x.site_id === s.id)?.overall ?? null })),
             scans: uScans.length,
             is_pro: uSites.some((s) => s.is_pro),
@@ -89,6 +92,8 @@ export async function POST(req) {
         stats: {
           users: users.length,
           newUsers7d: users.filter((u) => new Date(u.created_at).getTime() > weekAgo).length,
+          withPhone: clients.filter((c) => c.phone).length,
+          verified: clients.filter((c) => c.verified).length,
           sites: sites.length,
           scans: scans.length,
           proSites: proSites.length,
