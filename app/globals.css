@@ -1896,3 +1896,24 @@ body { background: var(--cream); color: var(--ink); font-family: var(--font); -w
 /* v3.5 — collapse empty scan section (removes the gap under the hero before any scan) */
 .tool-idle { padding-top: 0 !important; padding-bottom: 0 !important; }
 .tool-idle .sec-inner { min-height: 0; }
+
+/* v3.9 — admin mobile: turn table rows into stacked cards */
+@media (max-width: 860px) {
+  .adm-table { overflow-x: visible; }
+  .adm-tr.head { display: none; }
+  .adm-tr, .adm-tr.bk { display: block; min-width: 0; border: 1px solid var(--g-line); border-radius: 14px; padding: 14px; margin-bottom: 10px; background: var(--g-card); }
+  .adm-tr > span { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 4px 0; font-size: 13px; }
+  .adm-tr > span::before { content: attr(data-label); font-size: 10.5px; font-weight: 800; letter-spacing: .5px; text-transform: uppercase; color: var(--g-muted); }
+  .adm-email { flex-direction: column; align-items: flex-start !important; }
+  .adm-email::before { content: "" !important; display: none; }
+  .adm-email { font-weight: 800; font-size: 14px !important; }
+  .adm-contact { align-items: flex-end; }
+  .adm-actions { justify-content: flex-end; gap: 8px; padding-top: 8px !important; border-top: 1px solid var(--g-bg); margin-top: 4px; }
+  .adm-sites { flex-wrap: wrap; justify-content: flex-end; }
+  .adm-stats { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .adm-stat { padding: 14px; }
+  .adm-stat-v { font-size: 22px; }
+  .adm-inbox { grid-template-columns: 1fr; }
+  .adm-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .adm-top { flex-wrap: wrap; gap: 10px; }
+}

@@ -60,7 +60,8 @@ export default function Admin() {
   }, [token]);
 
   const loadOverview = useCallback(async () => {
-    const [r, b, t] = await Promise.all([api("overview"), api("listBookings"), api("listThreads")]);
+    const r = await api("loadAll");
+    const b = r, t = r;
     if (r?.stats) { setStats(r.stats); setClients(r.clients || []); }
     if (b?.bookings) setBookings(b.bookings);
     if (t?.threads) setThreads(t.threads);
@@ -219,7 +220,7 @@ export default function Admin() {
             {shown.map((c) => (
               <div className="adm-tr" key={c.id}>
                 <span className="adm-email">{c.email || c.id.slice(0, 8)}<i>{c.scans} scans · {c.messages} msgs{c.verified ? "" : " · unverified"}</i></span>
-                <span className="adm-contact">
+                <span className="adm-contact" data-label="Contact">
                   {c.phone ? (
                     <>
                       <a href={`https://wa.me/${String(c.phone).replace(/[^0-9]/g, "")}`} target="_blank" rel="noopener noreferrer" className="adm-wa" title="WhatsApp">WA</a>
@@ -227,17 +228,17 @@ export default function Admin() {
                     </>
                   ) : <i className="g-dim">no phone</i>}
                 </span>
-                <span className="adm-sites">{c.sites.length ? c.sites.map((s) => <em key={s.id}>{hostOf(s.url)}</em>) : <i className="g-dim">no store yet</i>}</span>
-                <span>{c.sites[0] ? <b style={{ color: scoreColor(c.sites[0].latest_score) }}>{c.sites[0].latest_score ?? "—"}</b> : "—"}</span>
-                <span>{c.is_pro ? <b className="adm-pro">PRO</b> : <i className="g-dim">Free</i>}</span>
-                <span>
+                <span className="adm-sites" data-label="Stores">{c.sites.length ? c.sites.map((s) => <em key={s.id}>{hostOf(s.url)}</em>) : <i className="g-dim">no store yet</i>}</span>
+                <span data-label="Score">{c.sites[0] ? <b style={{ color: scoreColor(c.sites[0].latest_score) }}>{c.sites[0].latest_score ?? "—"}</b> : "—"}</span>
+                <span data-label="Plan">{c.is_pro ? <b className="adm-pro">PRO</b> : <i className="g-dim">Free</i>}</span>
+                <span data-label="Stage">
                   {c.sites[0] ? (
                     <select className="adm-stage" value={c.sites[0].lead_status || "new"} onChange={(e) => setStage(c.sites[0].id, e.target.value)}>
                       {STAGES.map((s) => <option key={s} value={s}>{STAGE_LABEL[s]}</option>)}
                     </select>
                   ) : "—"}
                 </span>
-                <span className="g-dim">{ago(c.last_activity)}</span>
+                <span className="g-dim" data-label="Last active">{ago(c.last_activity)}</span>
                 <span className="adm-actions">
                   <button className="g-btn-ghost dark sm2" onClick={() => openDetail(c)}>{busy === "detail" ? "…" : "View"}</button>
                   <button className="g-btn-primary sm" onClick={() => { setMsgTo(c); setMsg((m) => ({ ...m, site_id: c.sites[0]?.id || "" })); }}>Message</button>

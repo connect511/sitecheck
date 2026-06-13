@@ -49,19 +49,21 @@ export async function POST(req) {
   const { action, payload } = await req.json();
 
   try {
-    /* ---- Business overview + full client roster in one call ---- */
-    if (action === "overview") {
-      const [users, sitesQ, scansQ, reportsQ, msgsQ] = await Promise.all([
+    /* ---- Combined dashboard load: users fetched ONCE, powers clients + bookings + inbox ---- */
+    if (action === "overview" || action === "loadAll") {
+      const [users, sitesQ, scansQ, reportsQ, msgsQ, bookingsQ] = await Promise.all([
         listAllUsers(admin),
         admin.from("sites").select("*").order("created_at", { ascending: false }),
         admin.from("scans").select("id,site_id,user_id,overall,created_at").order("created_at", { ascending: false }).limit(2000),
         admin.from("reports").select("id,user_id,site_id,created_at"),
-        admin.from("admin_messages").select("id,user_id,created_at,read_at"),
+        admin.from("admin_messages").select("*").order("created_at", { ascending: true }).limit(2000),
+        admin.from("service_bookings").select("*").order("created_at", { ascending: false }).limit(500),
       ]);
       const sites = sitesQ.data || [];
       const scans = scansQ.data || [];
       const reports = reportsQ.data || [];
       const msgs = msgsQ.data || [];
+      const emailOf = Object.fromEntries(users.map((u) => [u.id, u.email]));
 
       const weekAgo = Date.now() - 7 * 864e5;
       const proSites = sites.filter((s) => s.is_pro);
@@ -88,6 +90,20 @@ export async function POST(req) {
         })
         .sort((a, b) => new Date(b.last_activity) - new Date(a.last_activity));
 
+      // Bookings with email
+      const bookings = (bookingsQ.data || []).map((b) => ({ ...b, email: emailOf[b.user_id] || b.user_id.slice(0, 8) }));
+
+      // Threads with email
+      const byUser = {};
+      msgs.forEach((m) => { (byUser[m.user_id] = byUser[m.user_id] || []).push(m); });
+      const threads = Object.entries(byUser).map(([uid, ms]) => ({
+        user_id: uid,
+        email: emailOf[uid] || uid.slice(0, 8),
+        messages: ms,
+        last: ms[ms.length - 1],
+        needsReply: ms[ms.length - 1]?.sender === "user",
+      })).sort((a, b) => new Date(b.last.created_at) - new Date(a.last.created_at));
+
       return Response.json({
         stats: {
           users: users.length,
@@ -102,6 +118,8 @@ export async function POST(req) {
           messagesSent: msgs.length,
         },
         clients,
+        bookings,
+        threads,
       });
     }
 
