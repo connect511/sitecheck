@@ -53,8 +53,15 @@ export async function POST(req) {
       const siteIds = (sites || []).map((s) => s.id);
       let scans = [], reports = [];
       if (siteIds.length) {
-        const { data: sc } = await admin.from("scans").select("*").in("site_id", siteIds).order("created_at", { ascending: false });
-        scans = sc || [];
+        // Latest full scan per site (with scores+checks), plus lightweight history rows for the rest.
+        const { data: full } = await admin.from("scans").select("*").in("site_id", siteIds).order("created_at", { ascending: false }).limit(siteIds.length);
+        const latestIds = new Set((full || []).map((s) => s.id));
+        const { data: light } = await admin.from("scans").select("id,site_id,user_id,overall,created_at").in("site_id", siteIds).order("created_at", { ascending: false }).limit(200);
+        // Merge: full latest rows + light rows for everything else
+        const merged = [...(full || [])];
+        (light || []).forEach((l) => { if (!latestIds.has(l.id)) merged.push(l); });
+        merged.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        scans = merged;
         const { data: rp } = await admin.from("reports").select("id,site_id,created_at").in("site_id", siteIds).order("created_at", { ascending: false });
         reports = rp || [];
       }

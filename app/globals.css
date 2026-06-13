@@ -1892,3 +1892,7 @@ body { background: var(--cream); color: var(--ink); font-family: var(--font); -w
 .adm-export { background: var(--g-card); border: 1.5px solid var(--g-line); color: var(--g-ink); border-radius: 10px; font-family: var(--font); font-weight: 700; font-size: 12px; padding: 8px 14px; cursor: pointer; white-space: nowrap; }
 .adm-export:hover { border-color: var(--g-primary); color: var(--g-primary); }
 @media (max-width: 980px) { .adm-stats { grid-template-columns: 1fr 1fr; } }
+
+/* v3.5 — collapse empty scan section (removes the gap under the hero before any scan) */
+.tool-idle { padding-top: 0 !important; padding-bottom: 0 !important; }
+.tool-idle .sec-inner { min-height: 0; }

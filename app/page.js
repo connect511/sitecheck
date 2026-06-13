@@ -538,7 +538,7 @@ export default function Home() {
         <div className="hero-trust">No signup to scan · <b>30 seconds</b> · <b>20+ checks</b> · no card needed</div>
       </section>
 
-      <section className="sec tool" id="tool">
+      <section className={`sec tool ${(themeStatus || loading || unlocking || data) ? "" : "tool-idle"}`} id="tool">
         <div className="sec-inner">
           {themeStatus && <div className="theme-status">{themeStatus}</div>}
           {loading && <div className="scanning"><div className="scanline" /><div className="status">{SCAN_MSGS[msgIdx]}</div></div>}

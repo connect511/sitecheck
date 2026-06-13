@@ -354,7 +354,8 @@ export default function Dashboard() {
 
   const loadInbox = useCallback(async () => {
     const sb = getSupabase(); if (!sb) return;
-    const { data } = await sb.from("admin_messages").select("*").order("created_at", { ascending: true });
+    const { data } = await sb.from("admin_messages").select("*").order("created_at", { ascending: false }).limit(100);
+    if (data) data.reverse();
     if (data) setInbox(data);
   }, []);
   // Live message polling — new admin messages light up the Chat badge without a reload
