@@ -28,13 +28,13 @@ export default function AuthModal({ onClose, onAuthed }) {
         // Sign up — Supabase emails a 6-digit code (when "Confirm email" is on + OTP token in template).
         const { data, error } = await sb.auth.signUp({ email, password, options: { data: { phone: phone.trim() } } });
         if (error) throw error;
-        if (data.session) { onAuthed?.(data.user); onClose?.(); return; } // confirmation disabled → straight in
+        if (data.session) { onAuthed?.(data.user, "signup"); onClose?.(); return; } // confirmation disabled → straight in
         setStep("otp");
         note("We sent a verification code to " + email + ". Enter it below.");
       } else {
         const { data, error } = await sb.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        onAuthed?.(data.user);
+        onAuthed?.(data.user, "login");
         onClose?.();
       }
     } catch (e) {
@@ -50,7 +50,7 @@ export default function AuthModal({ onClose, onAuthed }) {
     try {
       const { data, error } = await sb.auth.verifyOtp({ email, token: code, type: "signup" });
       if (error) throw error;
-      onAuthed?.(data.user);
+      onAuthed?.(data.user, "signup");
       onClose?.();
     } catch (e) {
       note(e.message || "That code didn't work — check it and try again.", true);

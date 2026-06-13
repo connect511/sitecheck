@@ -1000,14 +1000,14 @@ export default function Home() {
       {authOpen && (
         <AuthModal
           onClose={() => setAuthOpen(false)}
-          onAuthed={async (u) => {
+          onAuthed={async (u, mode) => {
             setUser(u);
             setAuthOpen(false);
-            track("CompleteRegistration", { content_name: "Account", status: true });
-            // Go straight to the dashboard and let it run the scan internally.
+            track(mode === "login" ? "Login" : "CompleteRegistration", { content_name: "Account", status: true });
+            // Small delay so the Pixel request flushes before the page navigates away.
             const target = pendingUrl || url;
-            if (target) { window.location.href = "/dashboard?scan=" + encodeURIComponent(target); }
-            else { window.location.href = "/dashboard"; }
+            const dest = target ? "/dashboard?scan=" + encodeURIComponent(target) : "/dashboard";
+            setTimeout(() => { window.location.href = dest; }, 600);
           }}
         />
       )}

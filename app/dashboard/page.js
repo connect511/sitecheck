@@ -477,7 +477,7 @@ export default function Dashboard() {
           if (r.site) {
             setActive(r.site.id); setTab("Overview");
             const d = await scan(r.site.url);
-            if (d) await api("saveScan", { site_id: r.site.id, scores: d.pagespeed?.scores, checks: d.seo?.checks });
+            if (d) { await api("saveScan", { site_id: r.site.id, scores: d.pagespeed?.scores, checks: d.seo?.checks }); track("Lead", { content_name: "Store Scan", content_category: "scan" }); }
             await loadData();
           }
         } finally { setBusy(""); }
@@ -491,7 +491,7 @@ export default function Dashboard() {
   }
   async function runScan(siteUrl, siteId) {
     setBusy("scanning");
-    try { const d = await scan(siteUrl); if (d) { await api("saveScan", { site_id: siteId, scores: d.pagespeed?.scores, checks: d.seo?.checks }); await loadData(); } }
+    try { const d = await scan(siteUrl); if (d) { await api("saveScan", { site_id: siteId, scores: d.pagespeed?.scores, checks: d.seo?.checks }); track("Lead", { content_name: "Store Re-scan", content_category: "scan" }); await loadData(); } }
     finally { setBusy(""); }
   }
   async function unlockPro(siteUrl) {
