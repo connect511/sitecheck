@@ -1917,3 +1917,26 @@ body { background: var(--cream); color: var(--ink); font-family: var(--font); -w
   .adm-tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .adm-top { flex-wrap: wrap; gap: 10px; }
 }
+
+/* v4.0 — full-dashboard ₹399 paywall gate with problem teaser */
+.pw-gate { display: flex; justify-content: center; padding: 8px 0 40px; }
+.pw-card { background: var(--g-card); border: 1px solid var(--g-line); border-radius: 24px; box-shadow: 0 24px 70px rgba(21,32,58,.16); padding: 36px 34px; max-width: 560px; width: 100%; text-align: center; }
+.pw-alert { display: inline-flex; align-items: center; gap: 8px; background: #fde8e8; color: var(--g-danger); font-size: 11px; font-weight: 900; letter-spacing: .5px; text-transform: uppercase; border-radius: 30px; padding: 8px 16px; }
+.pw-leak { font-size: 52px; font-weight: 900; color: var(--g-danger); margin: 18px 0 0; line-height: 1; letter-spacing: -.02em; }
+.pw-leak span { font-size: 18px; font-weight: 700; color: var(--g-muted); }
+.pw-leak-sub { font-size: 14px; line-height: 1.6; color: var(--g-muted); margin: 12px auto 0; max-width: 420px; }
+.pw-problems { margin: 26px 0 0; border: 1px solid var(--g-line); border-radius: 16px; overflow: hidden; text-align: left; }
+.pw-prob { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid var(--g-bg); font-size: 14px; }
+.pw-prob:last-child { border-bottom: none; }
+.pw-prob-x { width: 24px; height: 24px; border-radius: 50%; background: #fde8e8; color: var(--g-danger); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.pw-prob-blur { flex: 1; font-weight: 700; color: var(--g-ink); filter: blur(6px); user-select: none; }
+.pw-prob-rec { font-size: 13px; font-weight: 800; color: var(--g-success); white-space: nowrap; }
+.pw-prob.more { justify-content: center; color: var(--g-muted); font-weight: 700; font-size: 13px; background: var(--g-bg); filter: none; }
+.pw-unlock { margin-top: 26px; }
+.pw-price { font-size: 30px; font-weight: 900; color: var(--g-ink); }
+.pw-price s { font-size: 17px; font-weight: 600; color: var(--g-muted); margin-right: 8px; }
+.pw-price i { display: block; font-size: 11px; font-weight: 700; color: var(--g-muted); font-style: normal; margin-top: 3px; letter-spacing: .3px; }
+.pw-cta { width: 100%; margin-top: 16px; padding: 16px; font-size: 16px; }
+.pw-trust { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 11.5px; color: var(--g-muted); margin-top: 12px; }
+.pw-timer { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 800; color: var(--g-danger); margin-top: 10px; }
+@media (max-width: 880px) { .pw-card { padding: 28px 20px; border-radius: 18px; } .pw-leak { font-size: 42px; } }

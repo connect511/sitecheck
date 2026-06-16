@@ -171,8 +171,8 @@ function Consultant({ open, onClose, isPro, context, onUpgrade, ask, onAsked }) 
         <div className="ai-gate">
           <div className="ai-gate-ic"><I n="lock" size={30} /></div>
           <b>The AI consultant is a Pro feature</b>
-          <p>Unlock the Rs 799 Growth Plan to chat with an assistant that understands your actual scan data.</p>
-          <button className="g-btn-primary" onClick={onUpgrade}>Unlock Pro — ₹799</button>
+          <p>Unlock the ₹399 Growth Plan to chat with an assistant that understands your actual scan data.</p>
+          <button className="g-btn-primary" onClick={onUpgrade}>Unlock Pro — ₹399</button>
         </div>
       ) : (
         <>
@@ -205,7 +205,7 @@ function MaybeBlur({ locked, title, sub, timer, onUnlock, children, compact }) {
           <span className="mb-lock"><I n="lock" size={compact ? 16 : 20} /></span>
           <b>{title}</b>
           {!compact && <p>{sub}</p>}
-          <div className="mb-price"><s>₹1,499</s> ₹799</div>
+          <div className="mb-price"><s>₹999</s> ₹399</div>
           <button className="g-btn-danger mb-cta" onClick={onUnlock}>Buy now — Unlock Pro</button>
           {timer && <span className="mb-timer"><I n="clock" size={11} /> Launch price ends in {timer}</span>}
         </div>
@@ -222,7 +222,7 @@ function ProGate({ title, desc, items, timer, onUnlock }) {
       <h3>{title}</h3>
       <p>{desc}</p>
       <div className="g-progate-items">{items.map((i) => <span key={i}><I n="check" size={12} /> {i}</span>)}</div>
-      <div className="g-progate-price"><s>₹1,499</s> ₹799 <i>one-time · per store</i></div>
+      <div className="g-progate-price"><s>₹999</s> ₹399 <i>one-time · per store</i></div>
       <button className="g-btn-danger" onClick={onUnlock}>Unlock Pro now</button>
       <div className="g-progate-timer"><I n="clock" size={12} /> Launch price ends in {timer}</div>
     </div>
@@ -252,10 +252,10 @@ function ProPopup({ leak, timer, onClose, onUnlock }) {
             ))}
           </div>
           <div className="pp-foot">
-            <div className="pp-price"><s>₹1,499</s> ₹799 <i>/ one-time per store</i></div>
+            <div className="pp-price"><s>₹999</s> ₹399 <i>/ one-time per store</i></div>
             <button className="g-btn-danger pp-cta" onClick={onUnlock}>Unlock Growth Plan</button>
           </div>
-          <div className="pp-timer"><I n="clock" size={12} /> Launch price ends in {timer} — then ₹1,499</div>
+          <div className="pp-timer"><I n="clock" size={12} /> Launch price ends in {timer} — then ₹999</div>
           <button className="pp-later" onClick={onClose}>Maybe later</button>
         </div>
       </div>
@@ -420,7 +420,7 @@ export default function Dashboard() {
     const unlockUrl = params.get("unlock");
     if (orderId && unlockUrl && !scanQueuedRef.current) {
       scanQueuedRef.current = true;
-      track("Purchase", { value: 799, currency: "INR", content_name: "Growth Plan" });
+      track("Purchase", { value: 399, currency: "INR", content_name: "Growth Plan" });
       window.history.replaceState({}, "", "/dashboard");
       (async () => {
         setBusy("unlocking");
@@ -679,7 +679,7 @@ export default function Dashboard() {
             <div className="g-plan">
               <div className="g-plan-tag">FREE PLAN</div>
               <p>Unlock your full Growth Plan — fixes, history, AI consultant.</p>
-              <div className="g-plan-price"><s>₹1,499</s> ₹799</div>
+              <div className="g-plan-price"><s>₹999</s> ₹399</div>
               <div className="g-plan-timer">Launch price ends in {launchLeft}</div>
               <button className="g-btn-accent" onClick={() => unlockPro(activeSite.url)}>Upgrade now</button>
             </div>
@@ -715,8 +715,41 @@ export default function Dashboard() {
 
             {!latest && tab !== "Settings" && <div className="g-empty"><h3>No scan yet</h3><p>Hit &quot;Re-scan now&quot; to run the first audit on this store.</p></div>}
 
+            {/* ============ ₹399 PAYWALL GATE — free users see the problem teaser, everything else blurred ============ */}
+            {latest && !isPro && !["Services", "Messages", "Settings"].includes(tab) && (
+              <div className="pw-gate">
+                <div className="pw-card">
+                  <div className="pw-alert"><span className="g-pulse" /> WE FOUND {failed.length} PROBLEMS COSTING YOU SALES</div>
+                  <h2 className="pw-leak">{inr(leak)}<span>/month</span></h2>
+                  <p className="pw-leak-sub">is roughly what <b>{hostOf(activeSite.url)}</b> is leaking right now — from slow load, weak SEO, missing trust signals and conversion gaps.</p>
+
+                  <div className="pw-problems">
+                    {failed.slice(0, 5).map((c, i) => (
+                      <div className="pw-prob" key={c.label}>
+                        <span className="pw-prob-x"><I n="x" size={13} /></span>
+                        <span className="pw-prob-blur">{c.label}</span>
+                        <span className="pw-prob-rec">+{inr(8500)}</span>
+                      </div>
+                    ))}
+                    {failed.length > 5 && <div className="pw-prob more">+ {failed.length - 5} more problems hidden</div>}
+                  </div>
+
+                  <div className="pw-unlock">
+                    <div className="pw-price"><s>₹999</s> ₹399 <i>one-time · this store</i></div>
+                    <button className="g-btn-danger pw-cta" onClick={() => unlockPro(activeSite.url)} disabled={busy === "unlocking"}>
+                      {busy === "unlocking" ? "Opening…" : "Unlock my full report — ₹399"}
+                    </button>
+                    <div className="pw-trust"><I n="shield" size={12} /> Exact fixes · copy-paste code · 14-day plan · instant access</div>
+                    {launchLeft && <div className="pw-timer"><I n="clock" size={11} /> Launch price ends in {launchLeft} — then ₹999</div>}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {(() => { /* gate: hide content tabs for free users */ })()}
+
             {/* ============ OVERVIEW ============ */}
-            {latest && tab === "Overview" && (
+            {latest && isPro && tab === "Overview" && (
               <>
                 <div className={`g-hero ${heroMood}`}>
                   <div className="g-hero-l">
@@ -817,7 +850,7 @@ export default function Dashboard() {
             )}
 
             {/* ============ PRIORITY FIXES ============ */}
-            {latest && tab === "Priority Fixes" && (
+            {latest && isPro && tab === "Priority Fixes" && (
               <>
                 <div className="g-sec-h"><h2>Priority fixes</h2><p>Estimated {inr(leak)}/month at stake · {failed.length} open issue{failed.length !== 1 ? "s" : ""} · ranked by revenue impact</p></div>
                 <div className="g-progress big"><span style={{ width: planPct + "%" }} /><i>{planPct}% of your top plan complete · {inr(recovered)} recovered</i></div>
@@ -836,7 +869,7 @@ export default function Dashboard() {
                           <span className="g-diff"><I n="scale" size={12} /> {diff}</span>
                           <span className="g-diff"><I n="clock" size={12} /> {TIME_OF[diff]}</span>
                         </div>
-                        {(c.fix || c.why) && <details><summary>How to fix</summary><p>{c.why ? <><b>Why it matters:</b> {c.why}<br /></> : null}<b>Fix:</b> {c.fix || "Open the relevant section in your store editor and apply the change. The Rs 799 Growth Plan gives you copy-paste code for this."}</p></details>}
+                        {(c.fix || c.why) && <details><summary>How to fix</summary><p>{c.why ? <><b>Why it matters:</b> {c.why}<br /></> : null}<b>Fix:</b> {c.fix || "Open the relevant section in your store editor and apply the change. The ₹399 Growth Plan gives you copy-paste code for this."}</p></details>}
                       </div>
                       <div className="g-leak-meta">
                         <span className="g-task-rec">+{inr(perCheck[c.label])}<i>recovery</i></span>
@@ -847,14 +880,14 @@ export default function Dashboard() {
                 })}
                 </MaybeBlur>
                 {!isPro && failed.length > 0 && (
-                  <div className="g-upsell"><div><b>Want these fixed for you?</b><p>The Rs 799 Growth Plan writes your fixes, gives you an install-ready Shopify file, and a 14-day plan.</p></div><button className="g-btn-primary" onClick={() => unlockPro(activeSite.url)}>Unlock Growth Plan — ₹799</button></div>
+                  <div className="g-upsell"><div><b>Want these fixed for you?</b><p>The ₹399 Growth Plan writes your fixes, gives you an install-ready Shopify file, and a 14-day plan.</p></div><button className="g-btn-primary" onClick={() => unlockPro(activeSite.url)}>Unlock Growth Plan — ₹399</button></div>
                 )}
                 {passed.length > 0 && <div className="g-card"><div className="g-card-h"><h3>Passing ({passed.length})</h3></div><div className="g-passes">{passed.map((c) => <span key={c.label}><I n="check" size={11} /> {c.label}</span>)}</div></div>}
               </>
             )}
 
             {/* ============ THEME AUDIT ============ */}
-            {latest && tab === "Theme Audit" && (
+            {latest && isPro && tab === "Theme Audit" && (
               <MaybeBlur locked={!isPro} title="Theme audit is locked" sub="Your theme score, every conversion blocker, and how it compares against Digistick themes." timer={launchLeft} onUnlock={() => unlockPro(activeSite.url)}>
               <>
                 {themeOrder && (
@@ -904,7 +937,7 @@ export default function Dashboard() {
             )}
 
             {/* ============ APP STACK ============ */}
-            {latest && tab === "App Stack" && (
+            {latest && isPro && tab === "App Stack" && (
               <MaybeBlur locked={!isPro} title="App stack audit is locked" sub="What your store covers and the exact apps that close your gaps — with revenue estimates." timer={launchLeft} onUnlock={() => unlockPro(activeSite.url)}>
               <>
                 <div className="g-sec-h"><h2>App stack audit</h2><p>What your store already covers, and the apps that close the gaps found in your scan.</p></div>
@@ -932,7 +965,7 @@ export default function Dashboard() {
             )}
 
             {/* ============ ADS STRATEGY ============ */}
-            {latest && tab === "Ads Strategy" && (
+            {latest && isPro && tab === "Ads Strategy" && (
               <MaybeBlur locked={!isPro} title="Ads strategy is locked" sub="Ad readiness, spend-risk analysis, budget calculator, audiences, hooks and a 4-week scaling plan." timer={launchLeft} onUnlock={() => unlockPro(activeSite.url)}>
               <>
                 <div className="g-sec-h"><h2>Ads strategy center</h2><p>Built from your store&apos;s readiness — fix conversion gaps before scaling spend.</p></div>
@@ -992,7 +1025,7 @@ export default function Dashboard() {
             )}
 
             {/* ============ COMPETITORS ============ */}
-            {tab === "Competitors" && (
+            {latest && isPro && tab === "Competitors" && (
               <>
                 <div className="g-sec-h"><h2>Competitor center</h2><p>Compare against any store, plus the industry average for D2C.</p></div>
                 <div className="g-card">
@@ -1090,18 +1123,18 @@ export default function Dashboard() {
             )}
 
             {/* ============ GROWTH PLAN ============ */}
-            {tab === "Growth Plan" && !report && (
+            {isPro && tab === "Growth Plan" && !report && (
               <>
                 <div className="g-sec-h"><h2>Your Growth Plan</h2><p>Reports & fix-kits you&apos;ve purchased for this store — open one to see the full analysis.</p></div>
                 {siteReports.length === 0 ? (
                   isPro ? <div className="g-empty sm"><p>Your purchased fix-kit will appear here.</p></div>
-                    : <div className="g-upsell"><div><b>No Growth Plan yet.</b><p>Unlock the Rs 799 plan to get written fixes, a growth blueprint, and copy-paste snippets saved to your account.</p></div><button className="g-btn-primary" onClick={() => unlockPro(activeSite.url)}>Get the Growth Plan — ₹799</button></div>
+                    : <div className="g-upsell"><div><b>No Growth Plan yet.</b><p>Unlock the ₹399 plan to get written fixes, a growth blueprint, and copy-paste snippets saved to your account.</p></div><button className="g-btn-primary" onClick={() => unlockPro(activeSite.url)}>Get the Growth Plan — ₹399</button></div>
                 ) : siteReports.map((r) => (
                   <div className="g-card g-kit" key={r.id}><div><b>Growth Plan (fix-kit)</b><span>{new Date(r.created_at).toLocaleDateString("en-IN")} · written fixes, install file, 14-day plan</span></div><button className="g-btn-primary sm" onClick={() => openReport(r.id)} disabled={busy === "report"}>{busy === "report" ? "Opening…" : <>Open <I n="arrowRight" size={12} /></>}</button></div>
                 ))}
               </>
             )}
-            {tab === "Growth Plan" && report && (
+            {isPro && tab === "Growth Plan" && report && (
               <>
                 <button className="g-back" onClick={() => setReport(null)}><I n="arrowRight" size={13} style={{ transform: "rotate(180deg)" }} /> Back to plans</button>
                 <div className="g-sec-h"><h2>Growth Plan — {hostOf(activeSite.url)}</h2><p>{report.roadmap?.summary || report.summary || "Your personalized fix-kit."}</p></div>
@@ -1158,7 +1191,7 @@ export default function Dashboard() {
             )}
 
             {/* ============ HISTORY ============ */}
-            {tab === "History" && (
+            {isPro && tab === "History" && (
               <>
                 <div className="g-sec-h"><h2>Score history</h2><p>Track your growth score over time and prove your fixes are working.</p></div>
                 <MaybeBlur locked={!isPro} title="Score history is locked" sub="Track your growth score scan-by-scan and prove your fixes are working." timer={launchLeft} onUnlock={() => unlockPro(activeSite.url)}>
@@ -1183,7 +1216,7 @@ export default function Dashboard() {
                     <select disabled={!isPro} defaultValue={activeSite.scan_freq || "off"} onChange={async (e) => { await api("saveSettings", { site_id: active, scan_freq: e.target.value }); await loadData(); }}><option value="off">Off</option><option value="weekly">Weekly</option><option value="monthly">Monthly</option></select></div>
                   <div className="g-set-row"><div><b>Score-drop alerts</b><p>Get an email if your overall health falls.</p></div>
                     <label className="g-switch"><input type="checkbox" disabled={!isPro} defaultChecked={!!activeSite.alerts_on} onChange={async (e) => { await api("saveSettings", { site_id: active, alerts_on: e.target.checked }); await loadData(); }} /><span /></label></div>
-                  {!isPro && <button className="g-btn-primary" onClick={() => unlockPro(activeSite.url)}>Unlock Pro to enable — ₹799</button>}
+                  {!isPro && <button className="g-btn-primary" onClick={() => unlockPro(activeSite.url)}>Unlock Pro to enable — ₹399</button>}
                   {isPro && <p className="g-dim">Scheduled scans run in the background — new entries appear under History.</p>}
                 </div>
                 <div className="g-card danger"><div className="g-set-row"><div><b>Remove site</b><p>Stop tracking this store and delete its scans.</p></div><button className="g-del" onClick={async () => { if (confirm("Remove this site?")) { await api("removeSite", { site_id: active }); setActive(null); await loadData(); } }}>Remove</button></div></div>

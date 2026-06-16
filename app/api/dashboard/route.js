@@ -143,7 +143,7 @@ export async function POST(req) {
         subject: "Payment received — your Growth Plan is unlocked",
         html: tpl({
           heading: "Your Growth Plan is unlocked 🎉",
-          body: `Payment confirmed for <b>${clean}</b>.<br><br>You now have full Pro access: written fixes, the install-ready Shopify file, your 14-day plan, Theme Audit, App Stack, Ads Strategy, score history and the AI Growth Consultant.<br><br><b>Amount paid:</b> ₹799 &middot; Order ${orderId}`,
+          body: `Payment confirmed for <b>${clean}</b>.<br><br>You now have full Pro access: written fixes, the install-ready Shopify file, your 14-day plan, Theme Audit, App Stack, Ads Strategy, score history and the AI Growth Consultant.<br><br><b>Amount paid:</b> ₹399 &middot; Order ${orderId}`,
           ctaText: "Open my Growth Plan", ctaUrl: APP + "/dashboard",
         }),
       });

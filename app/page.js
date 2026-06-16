@@ -382,7 +382,7 @@ export default function Home() {
               headers: { "Content-Type": "application/json", Authorization: "Bearer " + tok },
               body: JSON.stringify({ action: "unlockPro", payload: { url: auditUrl, report: json, orderId } }),
             });
-            track("Purchase", { value: 799, currency: "INR", content_name: "Growth Plan", content_type: "product" });
+            track("Purchase", { value: 399, currency: "INR", content_name: "Growth Plan", content_type: "product" });
           }
         }
       } catch { /* not logged in or supabase off — report still shows on page */ }
@@ -506,7 +506,7 @@ export default function Home() {
 
   return (
     <>
-      <div className="ticker">TRUSTED BY D2C BRANDS &amp; SHOPIFY STORES &nbsp;·&nbsp; <b>FREE INSTANT AUDIT</b> &nbsp;·&nbsp; FIX-KIT FROM <b>₹799</b> &nbsp;·&nbsp; BY DIGISTICK</div>
+      <div className="ticker">TRUSTED BY D2C BRANDS &amp; SHOPIFY STORES &nbsp;·&nbsp; <b>FREE INSTANT AUDIT</b> &nbsp;·&nbsp; FIX-KIT FROM <b>₹399</b> &nbsp;·&nbsp; BY DIGISTICK</div>
 
       <div className="nav">
         <div className="logo">DIGI<span className="sq">STICK</span></div>
@@ -833,13 +833,13 @@ export default function Home() {
                       </div>
 
                       <div className="price-block">
-                        <div className="price-now">₹799<span> today</span></div>
+                        <div className="price-now">₹399<span> today</span></div>
                         <div className="price-save">You save 91%</div>
                       </div>
 
                       <div className="timer-row">⏳ Your audit &amp; this price are saved for <SessionTimer /> — after that you'll need to re-scan.</div>
 
-                      <button className="btn-yellow big" onClick={unlock} disabled={unlocking}>{unlocking ? "Starting checkout…" : "Unlock my fix-kit for ₹799 →"}</button>
+                      <button className="btn-yellow big" onClick={unlock} disabled={unlocking}>{unlocking ? "Starting checkout…" : "Unlock my fix-kit for ₹399 →"}</button>
 
                       <div className="guarantee">✓ Instant access · Secure Cashfree checkout · UPI, cards &amp; netbanking</div>
                       {error && <div className="err">{error}</div>}
@@ -904,7 +904,7 @@ export default function Home() {
           <div className="steps">
             <Reveal><div className="step"><div className="step-num">1</div><span className="step-time">~5 sec</span><h3>Paste your link</h3><p>Drop any store or website URL. No signup, no card. We scan it live in about 30 seconds.</p></div></Reveal>
             <Reveal delay={120}><div className="step"><div className="step-num">2</div><span className="step-time">~30 sec</span><h3>See what&apos;s leaking</h3><p>Get real scores and a checklist of issues — speed, SEO, broken trust signals, missing conversion elements.</p></div></Reveal>
-            <Reveal delay={240}><div className="step"><div className="step-num">3</div><span className="step-time">~2 min</span><h3>Unlock the fix-kit</h3><p>For ₹799, get your fixes written for you, an install-ready file, a 14-day plan, and copy-paste CRO code.</p></div></Reveal>
+            <Reveal delay={240}><div className="step"><div className="step-num">3</div><span className="step-time">~2 min</span><h3>Unlock the fix-kit</h3><p>For ₹399, get your fixes written for you, an install-ready file, a 14-day plan, and copy-paste CRO code.</p></div></Reveal>
           </div>
         </div>
       </section>
@@ -913,7 +913,7 @@ export default function Home() {
         <div className="sec-inner">
           <div className="lk-grid">
             <div>
-              <Reveal><span className="tag tag-yellow">Inside the ₹799 fix-kit</span>
+              <Reveal><span className="tag tag-yellow">Inside the ₹399 fix-kit</span>
               <h2 className="sec-title">Everything <span className="blue">written</span>.<br />Everything <span className="red">ready</span>.</h2>
               <p className="sec-sub">Not a list of problems — the actual fixes, done. Personalized to your store&apos;s niche by AI and checked against D2C benchmarks.</p></Reveal>
               <div className="lk-list">
@@ -932,7 +932,7 @@ export default function Home() {
             <Reveal delay={200} className="lk-sticky">
               <div className="lk-price">
                 <div className="lk-badge">One-time · per store</div>
-                <div className="lk-num">₹799</div>
+                <div className="lk-num">₹399</div>
                 <div className="lk-sub">Scan free first — pay only if you want the fixes done for you.</div>
                 <div className="lk-perks">
                   <span>✓ Instant access</span><span>✓ Personalized by AI</span><span>✓ UPI, cards &amp; netbanking</span>
@@ -950,7 +950,7 @@ export default function Home() {
           <Reveal><span className="tag tag-dark">Loved by founders</span>
           <h2 className="sec-title">Real stores. <span className="blue">Real lifts.</span></h2></Reveal>
           <div className="testi-grid">
-            <Reveal><div className="testi"><div className="testi-stars">★★★★★</div><p className="testi-text">&quot;Ran my Shopify store through it and pasted in the urgency + COD badges. Add-to-carts jumped within a week. Best ₹799 I&apos;ve spent.&quot;</p><div className="testi-foot"><span className="testi-av av-blue">R</span><div><div className="testi-name">Rahul M.</div><div className="testi-role">D2C founder, skincare</div></div></div></div></Reveal>
+            <Reveal><div className="testi"><div className="testi-stars">★★★★★</div><p className="testi-text">&quot;Ran my Shopify store through it and pasted in the urgency + COD badges. Add-to-carts jumped within a week. Best ₹399 I&apos;ve spent.&quot;</p><div className="testi-foot"><span className="testi-av av-blue">R</span><div><div className="testi-name">Rahul M.</div><div className="testi-role">D2C founder, skincare</div></div></div></div></Reveal>
             <Reveal delay={120}><div className="testi"><div className="testi-stars">★★★★★</div><p className="testi-text">&quot;The roadmap was scary accurate. It found the exact reasons my product page wasn&apos;t converting and gave me the code to fix it.&quot;</p><div className="testi-foot"><span className="testi-av av-yellow">P</span><div><div className="testi-name">Priya S.</div><div className="testi-role">Owner, home &amp; kitchen brand</div></div></div></div></Reveal>
             <Reveal delay={240}><div className="testi"><div className="testi-stars">★★★★★</div><p className="testi-text">&quot;I&apos;m not technical. The copy-paste sections meant I actually shipped the fixes instead of adding them to a to-do list forever.&quot;</p><div className="testi-foot"><span className="testi-av av-red">A</span><div><div className="testi-name">Aman K.</div><div className="testi-role">Shopify store owner</div></div></div></div></Reveal>
           </div>
@@ -961,8 +961,8 @@ export default function Home() {
         <div className="sec-inner" style={{ maxWidth: 760 }}>
           <div className="center"><Reveal><span className="tag tag-blue">Questions</span><h2 className="sec-title">Good to <span className="blue">know</span></h2></Reveal></div>
           <Reveal><div className="faq">
-            <FaqItem q="Is the scan really free?" a="Yes. The full audit — scores, SEO checks, issues — is free with no signup. You only pay ₹799 if you want the done-for-you fixes, install-ready file, and full fix-kit." />
-            <FaqItem q="What's actually in the ₹799 fix-kit?" a="Your fixes written for you (SEO titles, meta description, FAQ, alt text), an install-ready Shopify file, 7 copy-paste CRO sections, a 14-day action plan, a competitor benchmark, and a downloadable report." />
+            <FaqItem q="Is the scan really free?" a="Yes. The full audit — scores, SEO checks, issues — is free with no signup. You only pay ₹399 if you want the done-for-you fixes, install-ready file, and full fix-kit." />
+            <FaqItem q="What's actually in the ₹399 fix-kit?" a="Your fixes written for you (SEO titles, meta description, FAQ, alt text), an install-ready Shopify file, 7 copy-paste CRO sections, a 14-day action plan, a competitor benchmark, and a downloadable report." />
             <FaqItem q="Will the code work on my Shopify theme?" a="The snippets are standard Liquid + HTML/CSS that drop into common theme files. Each tells you exactly where to paste it. Theme-agnostic and easy to remove." />
             <FaqItem q="Do I get a dashboard?" a="Yes — create a free account and every scan is saved to your dashboard, so you can track scores over time, re-scan after fixes, and keep multiple stores in one place." />
             <FaqItem q="How accurate is the revenue-leak estimate?" a="It's a directional figure computed from the issues actually found in your scan, using conservative D2C benchmarks — a guide to what's at stake, not a guarantee." />
@@ -984,7 +984,7 @@ export default function Home() {
 
       {data && !premium && !unlocking && (
         <div className="sticky-unlock">
-          <div className="su-left"><span className="su-price">₹799</span><span className="su-txt">Unlock full fix-kit</span></div>
+          <div className="su-left"><span className="su-price">₹399</span><span className="su-txt">Unlock full fix-kit</span></div>
           <button className="su-btn" onClick={unlock} disabled={unlocking}>{unlocking ? "…" : "Unlock →"}</button>
         </div>
       )}

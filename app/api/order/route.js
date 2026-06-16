@@ -5,9 +5,9 @@ export const runtime = "nodejs";
 
 // Creates a Cashfree order. Amount + product are fixed server-side so the
 // client can never tamper with the price. Supports two products:
-//   "report" → ₹799 fix-kit
+//   "report" → ₹399 fix-kit
 //   "theme"  → the CRO theme upsell (price from theme config)
-const PRICES = { report: 799, theme: THEME.price }; // theme price is overridden per-theme below
+const PRICES = { report: 399, theme: THEME.price }; // theme price is overridden per-theme below
 
 function cfBase() {
   return process.env.CASHFREE_ENV === "production"
